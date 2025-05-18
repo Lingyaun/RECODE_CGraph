@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20250518-0601-Experimental"
+	Name="(empty)"
+	Generator="ctest-4.0.0"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Windows"
+	Hostname="[NON-UTF-8-BYTE-0xCC][NON-UTF-8-BYTE-0xEC]ѡ2"
+	OSRelease=" Personal"
+	OSVersion=" (Build 22000)"
+	OSPlatform="AMD64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="7"
+	ModelName=""
+	ProcessorCacheSize="-1"
+	NumberOfLogicalCPU="20"
+	NumberOfPhysicalCPU="14"
+	TotalVirtualMemory="61718"
+	TotalPhysicalMemory="48918"
+	LogicalProcessorsPerPhysical="1"
+	ProcessorClockFrequency="3494"
+	>
+	<Testing>
+		<StartDateTime>May 18 14:01 [NON-UTF-8-BYTE-0xD6]й[NON-UTF-8-BYTE-0xFA][NON-UTF-8-BYTE-0xB1][NON-UTF-8-BYTE-0xEA]׼ʱ[NON-UTF-8-BYTE-0xBC][NON-UTF-8-BYTE-0xE4]</StartDateTime>
+		<StartTestTime>1747548105</StartTestTime>
+		<TestList/>
+		<EndDateTime>May 18 14:01 [NON-UTF-8-BYTE-0xD6]й[NON-UTF-8-BYTE-0xFA][NON-UTF-8-BYTE-0xB1][NON-UTF-8-BYTE-0xEA]׼ʱ[NON-UTF-8-BYTE-0xBC][NON-UTF-8-BYTE-0xE4]</EndDateTime>
+		<EndTestTime>1747548105</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
