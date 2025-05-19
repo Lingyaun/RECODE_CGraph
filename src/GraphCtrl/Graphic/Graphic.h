@@ -3,12 +3,11 @@
 
 #include <list>
 #include <queue>
-#include <vector>
 
 #include "../../CObject/CObject.h"
 #include "../GraphNode/GraphNode.h"
 #include "../GraphDefine.h"
-
+#include "../GraphThread/GraphThreadPool.h"
 
 class Graphic : public CObject {
 public:
@@ -39,12 +38,17 @@ public:
      */
     ~Graphic() override;
 
-public:
-    CSTATUS addNode(GraphNode* object);
+    /**
+     * 向图化中添加节点信息
+     * @param object
+     * @return
+     */
+    CSTATUS addGraphNode(GraphNode* node);
 
 private:
-    std::queue<GraphNode *> que_;    // 计算后的数据
+    std::queue<GraphNode *> queue_;     // 计算后的数据
     std::list<GraphNode *> nodes_;    // 插进来的数据
+    GraphThreadPool* thread_pool_;    // 线程池
 };
 
 
