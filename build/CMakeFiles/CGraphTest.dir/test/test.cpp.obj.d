@@ -1,5 +1,5 @@
-CMakeFiles/CGraph.dir/src/main.cpp.obj: \
- C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/main.cpp \
+CMakeFiles/CGraphTest.dir/test/test.cpp.obj: \
+ C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/test/test.cpp \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/iostream \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/requires_hosted.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/x86_64-w64-mingw32/bits/c++config.h \
@@ -144,6 +144,18 @@ CMakeFiles/CGraph.dir/src/main.cpp.obj: \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/ostream.tcc \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/istream \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/istream.tcc \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/thread \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/std_thread.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/unique_ptr.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/this_thread_sleep.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/chrono.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/ratio \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/cstdint \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/stdint.h \
+ D:/Mingw/mingw64/x86_64-w64-mingw32/include/stdint.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/limits \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/ctime \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/parse_numbers.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphInclude.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphic/Graphic.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/list \
@@ -167,45 +179,39 @@ CMakeFiles/CGraph.dir/src/main.cpp.obj: \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphnode/GraphNode.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/atomic \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/atomic_base.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/stdint.h \
- D:/Mingw/mingw64/x86_64-w64-mingw32/include/stdint.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/atomic_lockfree_defines.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/set \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/stl_tree.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/node_handle.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/stl_set.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/stl_multiset.h \
+ D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/erase_if.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/CObject/CObject.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/UtilsCtrl/UtilsInclude.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/UtilsCtrl/UtilsDefine.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/CObject/CObject.h \
- C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphDefine.h \
- C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/UtilsCtrl/UtilsInclude.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphThread/GraphThreadPool.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/future \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/mutex \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/chrono.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/ratio \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/cstdint \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/limits \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/ctime \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/parse_numbers.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/std_mutex.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/unique_lock.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/condition_variable \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/shared_ptr.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/shared_ptr_base.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/unique_ptr.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/ext/concurrence.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/atomic_futex.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/std_function.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/std_thread.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/functional \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/unordered_map \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/unordered_map.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/hashtable.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/hashtable_policy.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/enable_special_members.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/node_handle.h \
- D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/erase_if.h \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/array \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/compare \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphDefine.h \
+ C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/UtilsCtrl/UtilsInclude.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphnode/GraphNode.h \
+ C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphDefine.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphNode/GraphNode.h \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/GraphThread/GraphThreadPool.h

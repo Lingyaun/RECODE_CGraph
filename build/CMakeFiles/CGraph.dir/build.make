@@ -72,24 +72,10 @@ include CMakeFiles/CGraph.dir/flags.make
 CMakeFiles/CGraph.dir/codegen:
 .PHONY : CMakeFiles/CGraph.dir/codegen
 
-CMakeFiles/CGraph.dir/src/main.cpp.obj: CMakeFiles/CGraph.dir/flags.make
-CMakeFiles/CGraph.dir/src/main.cpp.obj: C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/main.cpp
-CMakeFiles/CGraph.dir/src/main.cpp.obj: CMakeFiles/CGraph.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/CGraph.dir/src/main.cpp.obj"
-	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CGraph.dir/src/main.cpp.obj -MF CMakeFiles/CGraph.dir/src/main.cpp.obj.d -o CMakeFiles/CGraph.dir/src/main.cpp.obj -c C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/main.cpp
-
-CMakeFiles/CGraph.dir/src/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/CGraph.dir/src/main.cpp.i"
-	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/main.cpp > CMakeFiles/CGraph.dir/src/main.cpp.i
-
-CMakeFiles/CGraph.dir/src/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CGraph.dir/src/main.cpp.s"
-	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/main.cpp -o CMakeFiles/CGraph.dir/src/main.cpp.s
-
 CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj: CMakeFiles/CGraph.dir/flags.make
 CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj: C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/CObject/CObject.cpp
 CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj: CMakeFiles/CGraph.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj"
 	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj -MF CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj.d -o CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj -c C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/CObject/CObject.cpp
 
 CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.i: cmake_force
@@ -103,7 +89,7 @@ CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.s: cmake_force
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj: CMakeFiles/CGraph.dir/flags.make
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj: C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphic/Graphic.cpp
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj: CMakeFiles/CGraph.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj"
 	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj -MF CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj.d -o CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj -c C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphic/Graphic.cpp
 
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.i: cmake_force
@@ -117,7 +103,7 @@ CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.s: cmake_force
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj: CMakeFiles/CGraph.dir/flags.make
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj: C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphnode/GraphNode.cpp
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj: CMakeFiles/CGraph.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj"
 	D:/Mingw/mingw64/bin/g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj -MF CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj.d -o CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj -c C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphnode/GraphNode.cpp
 
 CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.i: cmake_force
@@ -130,7 +116,6 @@ CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.s: cmake_force
 
 # Object files for target CGraph
 CGraph_OBJECTS = \
-"CMakeFiles/CGraph.dir/src/main.cpp.obj" \
 "CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj" \
 "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj" \
 "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj"
@@ -138,20 +123,19 @@ CGraph_OBJECTS = \
 # External object files for target CGraph
 CGraph_EXTERNAL_OBJECTS =
 
-CGraph.exe: CMakeFiles/CGraph.dir/src/main.cpp.obj
-CGraph.exe: CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj
-CGraph.exe: CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj
-CGraph.exe: CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj
-CGraph.exe: CMakeFiles/CGraph.dir/build.make
-CGraph.exe: CMakeFiles/CGraph.dir/linkLibs.rsp
-CGraph.exe: CMakeFiles/CGraph.dir/objects1.rsp
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable CGraph.exe"
+libCGraph.dll: CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj
+libCGraph.dll: CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj
+libCGraph.dll: CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj
+libCGraph.dll: CMakeFiles/CGraph.dir/build.make
+libCGraph.dll: CMakeFiles/CGraph.dir/linkLibs.rsp
+libCGraph.dll: CMakeFiles/CGraph.dir/objects1.rsp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX shared library libCGraph.dll"
 	"C:/Program Files/CMake/bin/cmake.exe" -E rm -f CMakeFiles/CGraph.dir/objects.a
 	D:/Mingw/mingw64/bin/ar.exe qc CMakeFiles/CGraph.dir/objects.a @CMakeFiles/CGraph.dir/objects1.rsp
-	D:/Mingw/mingw64/bin/g++.exe -g -Wl,--whole-archive CMakeFiles/CGraph.dir/objects.a -Wl,--no-whole-archive -o CGraph.exe -Wl,--out-implib,libCGraph.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/CGraph.dir/linkLibs.rsp
+	D:/Mingw/mingw64/bin/g++.exe -g -shared -o libCGraph.dll -Wl,--out-implib,libCGraph.dll.a -Wl,--major-image-version,0,--minor-image-version,0 -Wl,--whole-archive CMakeFiles/CGraph.dir/objects.a -Wl,--no-whole-archive @CMakeFiles/CGraph.dir/linkLibs.rsp
 
 # Rule to build all files generated by this target.
-CMakeFiles/CGraph.dir/build: CGraph.exe
+CMakeFiles/CGraph.dir/build: libCGraph.dll
 .PHONY : CMakeFiles/CGraph.dir/build
 
 CMakeFiles/CGraph.dir/clean:

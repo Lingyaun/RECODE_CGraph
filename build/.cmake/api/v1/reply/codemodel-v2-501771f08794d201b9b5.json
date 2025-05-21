@@ -15,7 +15,8 @@
 					"source" : ".",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -30,7 +31,8 @@
 					"name" : "CGraph",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -39,8 +41,15 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "CGraph::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-CGraph-Debug-fcbf05c7fb863872da69.json",
+					"jsonFile" : "target-CGraph-Debug-849d673e690585666b54.json",
 					"name" : "CGraph",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "CGraphTest::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-CGraphTest-Debug-ceca95c4c78935e5d50f.json",
+					"name" : "CGraphTest",
 					"projectIndex" : 0
 				}
 			]

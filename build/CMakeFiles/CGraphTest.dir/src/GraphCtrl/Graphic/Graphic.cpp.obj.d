@@ -1,4 +1,4 @@
-CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj: \
+CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj: \
  C:/Users/泠媛/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphic/Graphic.cpp \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/set \
  D:/Mingw/mingw64/lib/gcc/x86_64-w64-mingw32/14.2.0/include/c++/bits/requires_hosted.h \

@@ -31,5 +31,15 @@
         (ptr) = nullptr;                \
     }                                   \
 
+#define CGRAPH_ASSERT_INIT(isInit)      \
+    if (isInit != is_init_) {           \
+        return STATUS_ERR;              \
+    }                                   \
+
+/* 输出锁 */
+#define INFO(msg) { \
+    std::lock_guard<std::mutex> lock(cout_mutex); \
+    std::cout << msg << std::endl; \
+}
 
 #endif //CGRAPH_UTILSDEFINE_H

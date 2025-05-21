@@ -1,30 +1,31 @@
-#include <thread>
-#include <iostream>
 #include <set>
-#include <algorithm>
-using namespace std;
-
 #include "Graphic.h"
-
+#include <algorithm>
 Graphic::Graphic() {
     thread_pool_ = nullptr;
+    is_init_ = false;
 }
 
 Graphic::~Graphic() {
     CGRAPH_DELETE_PTR(thread_pool_)
-    std::for_each(nodes_.begin(), nodes_.end(), [](GraphNode* node){CGRAPH_DELETE_PTR(node)});
+    is_init_ = false;
+    std::for_each(graph_nodes_.begin(), graph_nodes_.end(),
+                  [](GraphNode* node){CGRAPH_DELETE_PTR(node)});
 }
 
 CSTATUS Graphic::init() {
     CGRAPH_FUNCTION_BEGIN
 
-    for (GraphNode* node : nodes_) {
+    for (GraphNode* node : graph_nodes_) {
         status = node->init();
         CGRAPH_FUNCTION_CHECK_STATUS
     }
 
     CGRAPH_DELETE_PTR(thread_pool_)    // 确保pool_为空
-    thread_pool_ = new GraphThreadPool();
+    thread_pool_ = new(std::nothrow) GraphThreadPool();
+    CGRAPH_ASSERT_NOT_NULL(thread_pool_)
+
+    is_init_ = true;    // 初始化完毕，设置标记位
 
     CGRAPH_FUNCTION_END
 }
@@ -33,19 +34,12 @@ CSTATUS Graphic::deinit() {
     CGRAPH_FUNCTION_BEGIN
     CGRAPH_DELETE_PTR(thread_pool_)
 
-    for (GraphNode* node : nodes_){
+    for (GraphNode* node : graph_nodes_) {
         status = node->deinit();
         CGRAPH_FUNCTION_CHECK_STATUS
     }
 
-    CGRAPH_FUNCTION_END
-}
-
-CSTATUS Graphic::addGraphNode(GraphNode* node) {
-    CGRAPH_FUNCTION_BEGIN
-    CGRAPH_ASSERT_NOT_NULL(node)
-
-    this->nodes_.push_back(node);
+    is_init_ = false;
 
     CGRAPH_FUNCTION_END
 }
@@ -53,8 +47,12 @@ CSTATUS Graphic::addGraphNode(GraphNode* node) {
 CSTATUS Graphic::run() {
     CGRAPH_FUNCTION_BEGIN
 
-    int workedSize = 0;
-    for (GraphNode* node : this->nodes_) {
+    // 必须初始化之后，才可以执行run方法
+    CGRAPH_ASSERT_INIT(true)
+
+    int runNodeSize = 0;
+    int totalNodeSize = graph_nodes_.size();
+    for (GraphNode* node : this->graph_nodes_) {
         if (!node->isRunnable()) {
             continue;    // 如果暂时无法执行，则继续
         }
@@ -65,10 +63,10 @@ CSTATUS Graphic::run() {
     std::vector<GraphNode *> runnableNodes;
     std::vector<std::future<CSTATUS>> futures;
 
-    runnableNodes.reserve(this->nodes_.size());
-    futures.reserve(this->nodes_.size());
+    runnableNodes.reserve(totalNodeSize);
+    futures.reserve(totalNodeSize);
 
-    while (!queue_.empty()) {
+    while (!queue_.empty() || runNodeSize > totalNodeSize) {
         /**
          * 1，将que_中可以执行的全部node，设定为 nodes
          * 2，并行计算 nodes 中的run方法
@@ -81,7 +79,7 @@ CSTATUS Graphic::run() {
         while(!queue_.empty()) {
             runnableNodes.emplace_back(queue_.front());
             queue_.pop();
-            workedSize++;
+            runNodeSize++;
         }
 
         for (GraphNode* node : runnableNodes) {
@@ -100,9 +98,8 @@ CSTATUS Graphic::run() {
         for (GraphNode* node : runnableNodes) {
             for (GraphNode* cur : node->run_before_) {
                 /**
-                 * 1，节点未被执行过
-                 * 2，节点处于可执行状态
-                 * 3，节点之前未添加过
+                 * 1，节点未被执行过且处于可执行状态
+                 * 2，节点之前未添加过
                  */
                 if (cur->isRunnable()
                     && duplications.end() == duplications.find(cur)) {
@@ -113,8 +110,61 @@ CSTATUS Graphic::run() {
         }
     }
 
-    if (workedSize != nodes_.size()) {
-        status = STATUS_ERR;    // 判定是否是所有的节点均被执行1次
+    // 执行完毕后，确认是否所有节点均被执行过一次
+    status = checkFinalStatus(runNodeSize);
+
+    CGRAPH_FUNCTION_END
+}
+
+/**
+ * 设置
+ * @param node
+ * @param dependNodes
+ * @return
+ */
+CSTATUS Graphic::addDependNodes(GraphNode* node,
+                                const std::set<GraphNode *>& dependNodes) {
+    CGRAPH_FUNCTION_BEGIN
+
+    CGRAPH_ASSERT_INIT(false)
+    CGRAPH_ASSERT_NOT_NULL(node)
+
+    for (GraphNode* cur : dependNodes) {
+        // 如果传入的信息中，有nullptr，则所有的信息均不参与计算
+        CGRAPH_ASSERT_NOT_NULL(cur);
+    }
+
+    for (GraphNode* cur : dependNodes) {
+        if (cur == node) {
+            continue;        // 本节点无法依赖本节点
+        }
+
+        cur->run_before_.insert(node);
+        node->dependence_.insert(cur);
+    }
+
+    node->left_depend_ = node->dependence_.size();//  当前节点的依赖数量
+    //这是本版本的重要改变，主要是为了能够实现循环，checkFinalStatus也是如此
+
+    CGRAPH_FUNCTION_END
+}
+
+CSTATUS Graphic::checkFinalStatus(int runNodeSize) {
+    CGRAPH_FUNCTION_BEGIN
+
+    // 判定是否是所有的节点均被执行1次
+    status = (runNodeSize == graph_nodes_.size()) ? STATUS_OK : STATUS_ERR;
+    CGRAPH_FUNCTION_CHECK_STATUS
+
+    // 判定是否所有节点均执行到了
+    for (GraphNode* node : graph_nodes_) {
+        if (false == node->done_) {
+            status = STATUS_ERR;
+        }
+
+        // 将节点信息复位，以便于开始下一次循环
+        node->done_.store(false);
+        node->left_depend_ = node->dependence_.size();
     }
 
     CGRAPH_FUNCTION_END

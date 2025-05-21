@@ -2,10 +2,13 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "CGraph.exe"
+			"path" : "libCGraph.dll"
 		},
 		{
-			"path" : "CGraph.pdb"
+			"path" : "libCGraph.dll.a"
+		},
+		{
+			"path" : "libCGraph.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -13,7 +16,7 @@
 	{
 		"commands" : 
 		[
-			"add_executable"
+			"add_library"
 		],
 		"files" : 
 		[
@@ -27,7 +30,7 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 10,
+				"line" : 12,
 				"parent" : 0
 			}
 		]
@@ -39,6 +42,12 @@
 			[
 				{
 					"fragment" : "-g -std=gnu++17"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"define" : "CGraph_EXPORTS"
 				}
 			],
 			"language" : "CXX",
@@ -54,8 +63,7 @@
 			[
 				0,
 				1,
-				2,
-				3
+				2
 			]
 		}
 	],
@@ -65,10 +73,6 @@
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "-g",
-				"role" : "flags"
-			},
-			{
 				"fragment" : "-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32",
 				"role" : "libraries"
 			}
@@ -76,7 +80,7 @@
 		"language" : "CXX"
 	},
 	"name" : "CGraph",
-	"nameOnDisk" : "CGraph.exe",
+	"nameOnDisk" : "libCGraph.dll",
 	"paths" : 
 	{
 		"build" : ".",
@@ -90,19 +94,12 @@
 			[
 				0,
 				1,
-				2,
-				3
+				2
 			]
 		}
 	],
 	"sources" : 
 	[
-		{
-			"backtrace" : 1,
-			"compileGroupIndex" : 0,
-			"path" : "src/main.cpp",
-			"sourceGroupIndex" : 0
-		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
@@ -122,5 +119,5 @@
 			"sourceGroupIndex" : 0
 		}
 	],
-	"type" : "EXECUTABLE"
+	"type" : "SHARED_LIBRARY"
 }

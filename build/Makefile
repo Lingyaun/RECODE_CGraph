@@ -129,12 +129,26 @@ CGraph/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/build
 .PHONY : CGraph/fast
 
+#=============================================================================
+# Target rules for targets named CGraphTest
+
+# Build rule for target.
+CGraphTest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CGraphTest
+.PHONY : CGraphTest
+
+# fast build rule for target.
+CGraphTest/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/build
+.PHONY : CGraphTest/fast
+
 src/CObject/CObject.obj: src/CObject/CObject.cpp.obj
 .PHONY : src/CObject/CObject.obj
 
 # target to build an object file
 src/CObject/CObject.cpp.obj:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/CObject/CObject.cpp.obj
 .PHONY : src/CObject/CObject.cpp.obj
 
 src/CObject/CObject.i: src/CObject/CObject.cpp.i
@@ -143,6 +157,7 @@ src/CObject/CObject.i: src/CObject/CObject.cpp.i
 # target to preprocess a source file
 src/CObject/CObject.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/CObject/CObject.cpp.i
 .PHONY : src/CObject/CObject.cpp.i
 
 src/CObject/CObject.s: src/CObject/CObject.cpp.s
@@ -151,6 +166,7 @@ src/CObject/CObject.s: src/CObject/CObject.cpp.s
 # target to generate assembly for a file
 src/CObject/CObject.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/CObject/CObject.cpp.s
 .PHONY : src/CObject/CObject.cpp.s
 
 src/GraphCtrl/Graphic/Graphic.obj: src/GraphCtrl/Graphic/Graphic.cpp.obj
@@ -159,6 +175,7 @@ src/GraphCtrl/Graphic/Graphic.obj: src/GraphCtrl/Graphic/Graphic.cpp.obj
 # target to build an object file
 src/GraphCtrl/Graphic/Graphic.cpp.obj:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj
 .PHONY : src/GraphCtrl/Graphic/Graphic.cpp.obj
 
 src/GraphCtrl/Graphic/Graphic.i: src/GraphCtrl/Graphic/Graphic.cpp.i
@@ -167,6 +184,7 @@ src/GraphCtrl/Graphic/Graphic.i: src/GraphCtrl/Graphic/Graphic.cpp.i
 # target to preprocess a source file
 src/GraphCtrl/Graphic/Graphic.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphic/Graphic.cpp.i
 .PHONY : src/GraphCtrl/Graphic/Graphic.cpp.i
 
 src/GraphCtrl/Graphic/Graphic.s: src/GraphCtrl/Graphic/Graphic.cpp.s
@@ -175,6 +193,7 @@ src/GraphCtrl/Graphic/Graphic.s: src/GraphCtrl/Graphic/Graphic.cpp.s
 # target to generate assembly for a file
 src/GraphCtrl/Graphic/Graphic.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphic/Graphic.cpp.s
 .PHONY : src/GraphCtrl/Graphic/Graphic.cpp.s
 
 src/GraphCtrl/Graphnode/GraphNode.obj: src/GraphCtrl/Graphnode/GraphNode.cpp.obj
@@ -183,6 +202,7 @@ src/GraphCtrl/Graphnode/GraphNode.obj: src/GraphCtrl/Graphnode/GraphNode.cpp.obj
 # target to build an object file
 src/GraphCtrl/Graphnode/GraphNode.cpp.obj:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj
 .PHONY : src/GraphCtrl/Graphnode/GraphNode.cpp.obj
 
 src/GraphCtrl/Graphnode/GraphNode.i: src/GraphCtrl/Graphnode/GraphNode.cpp.i
@@ -191,6 +211,7 @@ src/GraphCtrl/Graphnode/GraphNode.i: src/GraphCtrl/Graphnode/GraphNode.cpp.i
 # target to preprocess a source file
 src/GraphCtrl/Graphnode/GraphNode.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.i
 .PHONY : src/GraphCtrl/Graphnode/GraphNode.cpp.i
 
 src/GraphCtrl/Graphnode/GraphNode.s: src/GraphCtrl/Graphnode/GraphNode.cpp.s
@@ -199,31 +220,32 @@ src/GraphCtrl/Graphnode/GraphNode.s: src/GraphCtrl/Graphnode/GraphNode.cpp.s
 # target to generate assembly for a file
 src/GraphCtrl/Graphnode/GraphNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.s
 .PHONY : src/GraphCtrl/Graphnode/GraphNode.cpp.s
 
-src/main.obj: src/main.cpp.obj
-.PHONY : src/main.obj
+test/test.obj: test/test.cpp.obj
+.PHONY : test/test.obj
 
 # target to build an object file
-src/main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/main.cpp.obj
-.PHONY : src/main.cpp.obj
+test/test.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/test/test.cpp.obj
+.PHONY : test/test.cpp.obj
 
-src/main.i: src/main.cpp.i
-.PHONY : src/main.i
+test/test.i: test/test.cpp.i
+.PHONY : test/test.i
 
 # target to preprocess a source file
-src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/main.cpp.i
-.PHONY : src/main.cpp.i
+test/test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/test/test.cpp.i
+.PHONY : test/test.cpp.i
 
-src/main.s: src/main.cpp.s
-.PHONY : src/main.s
+test/test.s: test/test.cpp.s
+.PHONY : test/test.s
 
 # target to generate assembly for a file
-src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraph.dir/build.make CMakeFiles/CGraph.dir/src/main.cpp.s
-.PHONY : src/main.cpp.s
+test/test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CGraphTest.dir/build.make CMakeFiles/CGraphTest.dir/test/test.cpp.s
+.PHONY : test/test.cpp.s
 
 # Help Target
 help:
@@ -234,6 +256,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... CGraph"
+	@echo "... CGraphTest"
 	@echo "... src/CObject/CObject.obj"
 	@echo "... src/CObject/CObject.i"
 	@echo "... src/CObject/CObject.s"
@@ -243,9 +266,9 @@ help:
 	@echo "... src/GraphCtrl/Graphnode/GraphNode.obj"
 	@echo "... src/GraphCtrl/Graphnode/GraphNode.i"
 	@echo "... src/GraphCtrl/Graphnode/GraphNode.s"
-	@echo "... src/main.obj"
-	@echo "... src/main.i"
-	@echo "... src/main.s"
+	@echo "... test/test.obj"
+	@echo "... test/test.i"
+	@echo "... test/test.s"
 .PHONY : help
 
 

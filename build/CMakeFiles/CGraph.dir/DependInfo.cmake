@@ -11,7 +11,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/CObject/CObject.cpp" "CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj" "gcc" "CMakeFiles/CGraph.dir/src/CObject/CObject.cpp.obj.d"
   "C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphic/Graphic.cpp" "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj" "gcc" "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphic/Graphic.cpp.obj.d"
   "C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/GraphCtrl/Graphnode/GraphNode.cpp" "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj" "gcc" "CMakeFiles/CGraph.dir/src/GraphCtrl/Graphnode/GraphNode.cpp.obj.d"
-  "C:/Users/Lingyuan/Desktop/My_work/RECODE_CGraph/src/main.cpp" "CMakeFiles/CGraph.dir/src/main.cpp.obj" "gcc" "CMakeFiles/CGraph.dir/src/main.cpp.obj.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

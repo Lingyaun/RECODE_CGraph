@@ -6,8 +6,9 @@
 
 #include "../../CObject/CObject.h"
 #include "../GraphNode/GraphNode.h"
-#include "../GraphDefine.h"
 #include "../GraphThread/GraphThreadPool.h"
+#include "../GraphDefine.h"
+
 
 class Graphic : public CObject {
 public:
@@ -39,16 +40,63 @@ public:
     ~Graphic() override;
 
     /**
-     * 向图化中添加节点信息
-     * @param object
+     * 在图中注册一个节点信息
+     * @tparam T
      * @return
      */
-    CSTATUS addGraphNode(GraphNode* node);
+    template<typename T>
+    CSTATUS registerGraphNode(GraphNode** nodeRef,
+            const std::set<GraphNode *>& dependNodes = std::initializer_list<GraphNode *>()) {
+        CGRAPH_FUNCTION_BEGIN
+        CGRAPH_ASSERT_INIT(false)
+        if (graph_nodes_.find(*nodeRef) != graph_nodes_.end()) {
+            return STATUS_ERR;    // 不可以一个节点重复注册
+        }
+
+        CGRAPH_DELETE_PTR(*nodeRef)    // 每次注册，都默认为是新的节点
+
+        /**
+         * 如果T类型是GraphNode的子类，则new T类型的对象，并且放到graph_nodes_中去
+         * 如果创建成功，则添加依赖信息。
+         * 如果添加依赖信息失败，则默认创建节点失败，清空节点信息
+         * */
+        if (std::is_base_of<GraphNode, T>::value) {
+            (*nodeRef) = new(std::nothrow) T();
+            status = addDependNodes(*nodeRef, dependNodes);
+            if (STATUS_OK == status) {
+                graph_nodes_.insert(dynamic_cast<GraphNode *>(*nodeRef));
+            } else {
+                // 如果new成功了，但是添加依赖的时候异常，则当做没生成这个节点
+                CGRAPH_DELETE_PTR(*nodeRef)
+            }
+        } else {
+            status = STATUS_ERR;
+        }
+
+        CGRAPH_FUNCTION_END
+    }
+
+    /**
+     * node节点，添加依赖节点信息
+     * @param node
+     * @param dependNodes
+     * @return
+     */
+    CSTATUS addDependNodes(GraphNode* node,
+                           const std::set<GraphNode *>& dependNodes);
+
+protected:
+    /**
+     * 确认图的最终执行状态
+     * @return
+     */
+    CSTATUS checkFinalStatus(int runNodeSize);
 
 private:
-    std::queue<GraphNode *> queue_;     // 计算后的数据
-    std::list<GraphNode *> nodes_;    // 插进来的数据
-    GraphThreadPool* thread_pool_;    // 线程池
+    std::queue<GraphNode *> queue_;          // 计算后的数据
+    std::set<GraphNode *> graph_nodes_;      // 插进来的数据
+    GraphThreadPool* thread_pool_;           // 线程池
+    bool is_init_;    // 标记是否已经初始化完毕
 };
 
 
