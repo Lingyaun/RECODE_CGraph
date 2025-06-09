@@ -2,18 +2,18 @@
 #include <thread>
 #include "../src/GraphCtrl/GraphInclude.h"
 
-mutex cout_mutex;
+std::mutex cout_mutex;
 class MyNode1 : public GraphNode {
 
 public:
     CSTATUS run () override {
         int status = STATUS_OK;
         INFO("enter node1 run function. sleep for 1 second ... ");
-        this_thread::sleep_for(chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         return status;
     }
 private:
-    mutex out;
+    std::mutex out;
 };
 
 class MyNode2 : public GraphNode {
@@ -22,11 +22,11 @@ public:
     CSTATUS run () override {
         CSTATUS status = STATUS_OK;
         INFO("enter node2 run function. sleep for 2 second ... ");
-        this_thread::sleep_for(chrono::milliseconds(2000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         return status;
     }
 private:
-    mutex out;
+    std::mutex out;
 };
 
 void demo() {
@@ -53,13 +53,13 @@ void demo() {
 
     /* 运行图计算。初始化后，支持多次循环计算 */
     for (int i = 0; i < 3; i++) {
-        cout << "CGraph test, loop : " << i << endl;
+        std::cout << "CGraph test, loop : " << i << std::endl;
         status = graphic->run();
     }
 
     /* 图信息逆初始化，准备结束计算 */
     status = graphic->deinit();
-    cout<<"done"<<endl;
+    std::cout<<"done"<<std::endl;
     delete graphic;
 }
 

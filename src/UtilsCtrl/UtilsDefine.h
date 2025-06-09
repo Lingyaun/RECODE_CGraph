@@ -36,6 +36,8 @@
         return STATUS_ERR;              \
     }                                   \
 
+#define CGRAPH_PROCESS_ERROR            \
+    return STATUS_ERR;                  \
 /* 输出锁 */
 #define INFO(msg) { \
     std::lock_guard<std::mutex> lock(cout_mutex); \

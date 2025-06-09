@@ -38,3 +38,31 @@ std::future<int> 表示一个将来会返回 int 类型结果的异步返回值�
 
 由于set(std::initializer_list<T> list)，可以使用initializer_list实现多个节点到set的转换
 
+
+#### v1.00
+
+该版本准备进行版本重构，主要为实现图循环逻辑实现结构重组并设计以下模块,
+element（元素）
+是所有被执行结构的基类，可以派生出node,group两种类型。无实际意义，且不可被执行。
+
+node（节点）
+是最小粒度的算子。node本身无法执行，但所有有具体功能的功能节点，都继承自node。
+
+functionNode（功能节点）
+是最小粒度的可执行算子，继承自node类，相当于是node的功能实现类。与node不同的是，functionNode有具体功能，且可以被执行。至于具体功能是什么，可以是输出字母a，也可以是去挖比特币。总之，需要自己去实现。
+
+group（组）
+是多个functionNode的组合。自身不可以执行，但可以派生出cluster和region等组合逻辑。
+
+cluster（簇）
+继承自group，由多个functionNode线性组合而成。执行cluster的时候，内部的node依次顺序执行。简而言之就是可以依次完成多个功能。
+
+region（区域）
+继承自group，也是由多个functionNode组合而成。与cluster的区别是，region中的加入的node需要指定相互依赖关系。如果不指定依赖的话，就相当于是并发执行了，因为没有任何需要依赖信息。
+
+pipeline（流水线）
+是以上信息运行的地方。所有的functionNode、cluster、region信息，都需要注册到pipeline中，并且设定相互依赖关系。注册了以上三种信息的pipeline，实际上就对应了一个dag图，执行pipeline的过程，就是图执行的过程。
+
+
+
+
