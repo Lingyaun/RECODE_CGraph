@@ -1,6 +1,5 @@
 #ifndef GNODE_H
 #define GNODE_H 
-
 #include"../GElement/GElement.h"
 
 class GNode : public GElement{

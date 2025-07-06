@@ -76,7 +76,7 @@ protected:
     
 
 
-private:
+protected:
     bool done_ { false };                     // 判定被执行结束
     bool is_init_ { false };                  // 是否初始化了
     bool linkable_ { false };                 // 判定是否可以连通计算
@@ -89,6 +89,7 @@ private:
 
     friend class GNode;
     friend class GCluster;
+    friend class GGroup;
     friend class GRegion;
     friend class GElementManager;
     friend class GPipeline;
