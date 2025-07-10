@@ -2,7 +2,7 @@
 #define CGRAPH_GCLUSTER_H
 
 #include <vector>
-#include"../../GElement/GElement.h"
+#include"../../GElement.h"
 
 class GCluster : public GElement {
 public:
@@ -10,7 +10,8 @@ public:
     ~GCluster() override;
     GCluster(const GCluster& cluster);
     GCluster& operator=(const GCluster& cluster);
-
+    
+protected:
     CSTATUS init() override;
     CSTATUS deinit() override;
     CSTATUS process(bool isMock) override;
@@ -36,9 +37,14 @@ public:
 private:
     GElementPtrArr cluster_elements_;    // cluster中包含的元素信息
 
+    friend class GElementManager;
     friend class GRegion;
+    friend class GPipeline;
+    friend class GraphThreadPool;
 };
 
 using GClusterPtr = GCluster *;
+using GClusterArr = std::vector<GCluster>;
+using ParaWorkedClusterArrs = std::vector<GClusterArr>;
 
 #endif //CGRAPH_GCLUSTER_H

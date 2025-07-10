@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "GGroupDefine.h"
-#include "../GElement/GElement.h"
+#include "../GElement.h"
 
 /* 所有节点组合的基类，所有节点组合功能，均继承自此类 */
 class GGroup : public GElement {

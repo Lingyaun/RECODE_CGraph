@@ -2,10 +2,9 @@
 #define GGRAPH_GREGION_H 
 
 #include"../GGroup.h"
-#include"../../GElement/GElementManager.h"
+#include"../../GElementManager.h"
 
 class GRegion : public GGroup { 
-
     protected:
     explicit GRegion();
     ~GRegion() override;
@@ -19,6 +18,12 @@ class GRegion : public GGroup {
     CSTATUS process(bool isMock) override;
 
     CSTATUS addElement(GElementPtr element) override;
+    
+     CSTATUS setThreadPool(GraphThreadPoolPtr pool);
+    
+private:
+    GElementManagerPtr manager_;
+    GraphThreadPoolPtr thread_pool_;    // 这里需要使用GPipeline类的线程池
 
     friend class GPipeline;
 };

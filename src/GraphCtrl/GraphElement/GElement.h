@@ -1,13 +1,13 @@
-#ifndef GELEMENT_H
-#define GELEMENT_H 
+#ifndef CGRAPH_GELEMENT_H
+#define CGRAPH_GELEMENT_H 
 
 #include <atomic>
 #include <set>
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "../../../CObject/CObject.h"
-#include "../../../UtilsCtrl/UtilsInclude.h"
+#include "../../CObject/CObject.h"
+#include "../../UtilsCtrl/UtilsInclude.h"
 
 class GElement : public CObject {
 public:
@@ -99,4 +99,4 @@ using GElementPtr = GElement *;
 using GElementPtrArr = std::vector<GElementPtr>;
 using GElementPtrSet = std::set<GElementPtr>;
 
-#endif
+#endif //CGRAPH_GELEMENT_H

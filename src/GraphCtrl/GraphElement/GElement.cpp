@@ -59,3 +59,10 @@ void GElement::setLoop(int loop)  {
 CSTATUS GElement::process(bool isMock) {
     CGRAPH_PROCESS_ERROR
 }
+void GElement::setName(const std::string& name) {
+    if (!name.empty()) {
+        this->name_ = name;
+    } else {
+        this->name_ = this->id;
+    }
+}

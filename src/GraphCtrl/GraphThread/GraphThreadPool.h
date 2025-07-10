@@ -6,23 +6,22 @@
 #include <atomic>
 #include <future>
 #include <condition_variable>
-#include <functional>
 
+
+#include "../GraphElement/GGroup/GCluster/GCluster.h"
 #include "../GraphDefine.h"
-#include "../GraphNode/GraphNode.h"
-
 
 
 class GraphThreadPool
 {
 private:
     std::vector<std::thread> pool_;                   // 线程池
-    std::queue<TaskFunc> tasks_que_;             // 任务队列
-    std::mutex mtx_;                             // 同步
-    std::condition_variable task_cond_;          // 条件阻塞
-    std::atomic<bool> run_{ true };              // 线程池是否执行
-    std::atomic<int> idl_thd_num_{ 0 };          // 空闲线程数量
-    std::atomic<int> max_thd_num_{MAX_THREAD_NUM};    // 最大线程数
+    std::queue<TaskFunc> tasks_que_;                  // 任务队列
+    std::mutex mtx_;                                  // 同步
+    std::condition_variable task_cond_;               // 条件阻塞
+    std::atomic<bool> run_{ true };                   // 线程池是否执行
+    std::atomic<int> idl_thd_num_{ 0 };               // 空闲线程数量
+    std::atomic<int> max_thd_num_{ MAX_THREAD_NUM };  // 最大线程数
 
 public:
     explicit GraphThreadPool(int maxThdNum = MAX_THREAD_NUM) {
@@ -39,8 +38,8 @@ public:
         }
     }
 
-    std::future<int> commit(GraphNode* node) {
-        auto curTask = std::make_shared<std::packaged_task<int()>>(std::bind(&GraphNode::process, node));
+    std::future<int> commit(const GCluster& cluster) {
+        auto curTask = std::make_shared<std::packaged_task<int()>>(std::bind(&GCluster::process, cluster, false));
         std::future<int> future = curTask->get_future();
         {
             // 添加任务到队列
@@ -108,5 +107,6 @@ protected:
     }
 };
 
+using GraphThreadPoolPtr = GraphThreadPool *;
 
 #endif //CGRAPH_GRAPHTHREADPOOL_H

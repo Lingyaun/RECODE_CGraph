@@ -1,7 +1,8 @@
 #ifndef CGRAPH_GRAPHINCLUDE_H
 #define CGRAPH_GRAPHINCLUDE_H
 
-#include "Graphic/Graphic.h"
-#include "GraphNode/GraphNode.h"
 #include "GraphThread/GraphThreadPool.h"
+#include "GraphElement/GElementInclude.h"
+#include "GraphPipeline/GPipeline.h"
+#include "GraphParam/GParamInclude.h"
 #endif //CGRAPH_GRAPHINCLUDE_H
