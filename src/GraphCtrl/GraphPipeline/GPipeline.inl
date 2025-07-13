@@ -25,9 +25,9 @@ CSTATUS GPipeline::registerGElement(GElementPtr* elementRef,
         CGRAPH_ASSERT_NOT_NULL(*elementRef)
         status = ((GNodePtr)(*elementRef))->setParamManager(this->param_manager_);
         CGRAPH_FUNCTION_CHECK_STATUS
-    } else if (std::is_same<GCluster, T>::value) {
+    } else if (std::is_same_v<GCluster, T>) {
         CGRAPH_ASSERT_NOT_NULL(elementRef)
-    } else if (std::is_same<GRegion, T>::value) {
+    } else if (std::is_same_v<GRegion, T>) {
         CGRAPH_ASSERT_NOT_NULL(elementRef)
     } else {
         return STATUS_ERR;
@@ -38,7 +38,7 @@ CSTATUS GPipeline::registerGElement(GElementPtr* elementRef,
     status = addDependElements(*elementRef, dependElements);
     CGRAPH_FUNCTION_CHECK_STATUS
 
-    status = element_manager_->addElement(dynamic_cast<GElementPtr>(*elementRef));
+    status = element_manager_->addElement(dynamic_cast<GElementPtr>(*elementRef));//将节点(如cluster，Region,functionnode)转换成element类型后注册进Pipeline
     element_repository_.insert(*elementRef);
     CGRAPH_FUNCTION_END
 }
@@ -64,6 +64,12 @@ GElementPtr GPipeline::createGNode(const GNodeInfo& info) {
 
 
 template<typename T>
+/**
+ * @param elements 创建的元素
+ * @param dependElements 依赖元素
+ * @param name 元素名称
+ * @param loop 循环次数
+ */
 GElementPtr GPipeline::createGNodeS(const GElementPtrArr& elements,
                                     const GElementPtrSet& dependElements,
                                     const std::string& name,

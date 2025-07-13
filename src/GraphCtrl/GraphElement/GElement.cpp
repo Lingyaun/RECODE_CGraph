@@ -63,6 +63,6 @@ void GElement::setName(const std::string& name) {
     if (!name.empty()) {
         this->name_ = name;
     } else {
-        this->name_ = this->id;
+        this->name_ = this->session;
     }
 }

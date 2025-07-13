@@ -25,6 +25,11 @@ struct GNodeInfo {
     }
 
     // 有依赖版本，适用于region创建
+    /**
+     * @param dependence 依赖的节点
+     * @param name       节点名称
+     * @param loop       循环次数
+     */
     GNodeInfo(const GElementPtrSet& dependence = std::initializer_list<GElementPtr>(),
               const std::string& name = "",
               int loop = 1) {

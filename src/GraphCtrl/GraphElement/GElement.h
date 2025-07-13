@@ -82,7 +82,7 @@ protected:
     bool linkable_ { false };                 // 判定是否可以连通计算
     int loop_ { 1 };                          // 节点执行次数
     std::string name_;                        // 节点名称
-    std::string id;                           // 节点唯一id信息
+    std::string session;                           // 节点唯一session信息
     std::set<GElement *> run_before_;         // 被依赖的节点
     std::set<GElement *> dependence_;         // 依赖的节点信息
     std::atomic<int> left_depend_{ 0 };       // 当 left_depend_ 值为0的时候，即可以执行该node信息

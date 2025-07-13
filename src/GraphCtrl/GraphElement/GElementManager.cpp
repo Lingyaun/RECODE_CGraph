@@ -104,7 +104,7 @@ CSTATUS GElementManager::analyze() {
         curClusterArr.clear();
 
         for (GCluster& cluster : runnableClusterArr) {
-            status = cluster.process(true);    // 不执行run方法的process
+            status = cluster.process(true);    // 不执行run方法的process，仅用来检查验证框架是否可运行
             CGRAPH_FUNCTION_CHECK_STATUS
         }
 

@@ -14,10 +14,10 @@ public:
     CSTATUS run () {
         CSTATUS status = STATUS_OK;
 
-        MyParam1* param1 = this->getGParam<MyParam1>("myParam1");
+        MyParam1* write_param = this->getGParam<MyParam1>("myParam1");//通过哈希表获取参数
         {
-            CGRAPH_PARAM_WRITE_REGION(param1)
-            std::cout << "--> write : " << ++param1->iValue << std::endl;
+            CGRAPH_PARAM_WRITE_REGION(write_param)
+            std::cout << "--> write : " << ++write_param->iValue << std::endl;
         }
 
         return status;

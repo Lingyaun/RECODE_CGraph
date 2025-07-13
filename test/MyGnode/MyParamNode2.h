@@ -8,11 +8,11 @@ class MyParamNode2 : public GNode {
 public:
     CSTATUS run () {
         CSTATUS status = STATUS_OK;
-        MyParam1* param1 = this->getGParam<MyParam1>("myParam1");
+        MyParam1* read_param = this->getGParam<MyParam1>("myParam1");//通过哈希表获取参数
 
         {
-            CGRAPH_PARAM_READ_REGION(param1)
-            std::cout << "--> read : " << param1->iValue << std::endl;
+            CGRAPH_PARAM_READ_REGION(read_param)
+            std::cout << "--> read : " << read_param->iValue << std::endl;
         }
 
         return status;
