@@ -1,10 +1,10 @@
-#ifndef CGRAPH_MYPARAMNODE2_H
-#define CGRAPH_MYPARAMNODE2_H
+#ifndef CGRAPH_MyReadParamNode_H
+#define CGRAPH_MyReadParamNode_H
 
 #include "../../src/GraphCtrl/GraphInclude.h"
 #include "../MyGParam/MyParam1.h"
 
-class MyParamNode2 : public GNode {
+class MyReadParamNode : public GNode {
 public:
     CSTATUS run () {
         CSTATUS status = STATUS_OK;

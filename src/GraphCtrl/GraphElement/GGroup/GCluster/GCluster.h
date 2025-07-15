@@ -2,7 +2,7 @@
 #define CGRAPH_GCLUSTER_H
 
 #include <vector>
-#include"../../GElement.h"
+#include"../GGroup.h"
 
 class GCluster : public GElement {
 public:

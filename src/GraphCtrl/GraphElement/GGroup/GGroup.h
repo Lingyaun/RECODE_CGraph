@@ -2,9 +2,10 @@
 #define GGRAPH_GGROUP_H 
 
 #include <vector>
+
 #include "GGroupDefine.h"
 #include "../GElement.h"
-
+#include "../../GraphParam/GParamInclude.h"
 /* 所有节点组合的基类，所有节点组合功能，均继承自此类 */
 class GGroup : public GElement {
 

@@ -1,9 +1,9 @@
-#ifndef CGRAPH_MYPARAMNODE1_H
-#define CGRAPH_MYPARAMNODE1_H
+#ifndef CGRAPH_MyWriteParamNode_H
+#define CGRAPH_MyWriteParamNode_H
 
 #include "../../src/GraphCtrl/GraphInclude.h"
 #include "../MyGParam/MyParam1.h"
-class MyParamNode1 : public GNode {
+class MyWriteParamNode : public GNode {
 public:
     CSTATUS init () {
         CSTATUS status = STATUS_OK;

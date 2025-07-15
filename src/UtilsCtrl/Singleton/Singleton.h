@@ -2,9 +2,9 @@
 #define CGRAPH_SINGLETON_H
 
 #include <shared_mutex>
-#include "../UtilsInclude.h"
-#include "../../CObject/CObject.h"
 
+#include "../../CObject/CObject.h"
+#include "../UtilsDefine.h"
 template<typename T>
 class Singleton : public CObject {
 public:

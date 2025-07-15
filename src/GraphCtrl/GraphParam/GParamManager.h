@@ -8,7 +8,6 @@
 #include "../../CObject/CObject.h"
 #include "../../UtilsCtrl/UtilsInclude.h"
 #include "GParam.h"
-#include"../GraphThread/GraphThreadPool.h"
 
 class GParamManager : public CObject
 {

@@ -4,5 +4,6 @@
 #include "GGroup.h"
 #include "GCluster/GCluster.h"
 #include "GRegion/GRegion.h"
+#include "GCondition/GCondition.h"
 
 #endif

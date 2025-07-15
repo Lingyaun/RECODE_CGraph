@@ -26,9 +26,9 @@ CSTATUS GPipeline::registerGElement(GElementPtr* elementRef,
         status = ((GNodePtr)(*elementRef))->setParamManager(this->param_manager_);
         CGRAPH_FUNCTION_CHECK_STATUS
     } else if (std::is_same_v<GCluster, T>) {
-        CGRAPH_ASSERT_NOT_NULL(elementRef)
+        CGRAPH_ASSERT_NOT_NULL(*elementRef)
     } else if (std::is_same_v<GRegion, T>) {
-        CGRAPH_ASSERT_NOT_NULL(elementRef)
+        CGRAPH_ASSERT_NOT_NULL(*elementRef)
     } else {
         return STATUS_ERR;
     }
