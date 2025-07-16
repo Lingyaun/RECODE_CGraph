@@ -48,13 +48,3 @@
         CGRAPH_FUNCTION_END
     }
     
-    CSTATUS GNode::setParamManager(const GParamManagerPtr manager) {
-    CGRAPH_FUNCTION_BEGIN
-
-    CGRAPH_ASSERT_NOT_NULL(manager)
-    CGRAPH_ASSERT_INIT(false)
-    
-    this->param_manager_ = manager;
-
-    CGRAPH_FUNCTION_END
-}

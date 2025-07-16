@@ -1,16 +1,17 @@
 #ifndef CGRAPH_UTILSDEFINE_H
 #define CGRAPH_UTILSDEFINE_H
 
-#include "../CObject/CObject.h"
 #include<iostream>
-#include <shared_mutex>
-#include <mutex>
 #include <ctime>
 #include <string>
 #include <cstdarg>
-#include <thread>
-#include <time.h>
 
+#include <thread>
+#include <shared_mutex>
+#include <mutex>
+
+#include "../CObject/CObject.h"
+//这里删除了线程池的引入
 using CGRAPH_READ_LOCK = std::shared_lock<std::shared_mutex>;
 using CGRAPH_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
 using CGRAPH_LOCK_GUARD = std::lock_guard<std::mutex>;
@@ -98,19 +99,19 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
 
 #define CGRAPH_PROCESS_ERROR            \
     return STATUS_ERR;                  \
-/* 输出锁 */
-#define INFO(msg) {                                 \
-    std::lock_guard<std::mutex> lock(cout_mutex);   \
-    std::cout << msg << std::endl;                  \
-}
+
+    
 /* 不支持 */
 #define CGRAPH_NO_SUPPORT                           \
     return STATUS_ERR;                              \
 
 
+/* 写入参数锁*/
 #define CGRAPH_PARAM_WRITE_REGION(param)            \
     CGRAPH_WRITE_LOCK paramWLock(param->lock_);     \
 
+
+/* 读取参数锁*/
 #define CGRAPH_PARAM_READ_REGION(param)             \
     CGRAPH_READ_LOCK paramRLock(param->lock_);      \
 

@@ -2,9 +2,9 @@
 #define CGRAPH_GCLUSTER_H
 
 #include <vector>
-#include"../../GElement.h"
+#include"../GGroup.h"
 
-class GCluster : public GElement {
+class GCluster : public GGroup {
 public:
     explicit GCluster();
     ~GCluster() override;
@@ -20,7 +20,7 @@ protected:
     CSTATUS run() override;
     CSTATUS afterRun() override;
 
-    CSTATUS addElement(GElementPtr element);
+    CSTATUS addElement(GElementPtr element)override;
     
     /**
      * 获取元素数量

@@ -5,7 +5,7 @@
 
     GCluster::~GCluster() =default;
 
-    GCluster::GCluster(const GCluster& cluster) : GElement(cluster) {
+    GCluster::GCluster(const GCluster& cluster) : GGroup(cluster) {
         this->cluster_elements_ = cluster.cluster_elements_;
     }
 

@@ -12,7 +12,7 @@ void tutorial_region () {
     b3 = pipeline->createGNode<MyNode1>(GNodeInfo({b1}, "nodeB3", 1));
     b4 = pipeline->createGNode<MyNode1>(GNodeInfo({b2,b3}, "nodeB4", 1));
 
-    b_region = pipeline->createGNodeS<GRegion>({b1, b2, b3, b4});    // 将 b1、b2、b3、b4 注册入b_region中，这里的四个节点合成一个Region节点且没有添加依赖关系，内部节点按照上面的依赖关系执行
+    b_region = pipeline->createGGroup<GRegion>({b1, b2, b3, b4});    // 将 b1、b2、b3、b4 注册入b_region中，这里的四个节点合成一个Region节点且没有添加依赖关系，内部节点按照上面的依赖关系执行
     if (nullptr == b_region) {
         return;
     }

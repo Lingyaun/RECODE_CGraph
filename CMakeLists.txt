@@ -11,6 +11,7 @@ set(TUTORIAL_LIST
         T03-Region
         T04-Complex
         T05-Param
+        T06-Condition
         )
 
 # 编译libCGraph动态库

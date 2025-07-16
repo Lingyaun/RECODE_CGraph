@@ -8,7 +8,6 @@
 #include "../../CObject/CObject.h"
 #include "../../UtilsCtrl/UtilsInclude.h"
 #include "GParam.h"
-#include"../GraphThread/GraphThreadPool.h"
 
 class GParamManager : public CObject
 {
@@ -46,7 +45,7 @@ private:
      * @param string first
      * @param GParam second
      */
-	std::unordered_map<std::string, GParam*> params_map_;
+	std::unordered_map<std::string, GParamPtr> params_map_;           // 记录param信息的hash表
     std::shared_mutex lock_;                                          // 读写锁
     bool is_init_;                                                    // 标记是否初始化结束
 
@@ -55,6 +54,24 @@ private:
 
 using GParamManagerPtr = GParamManager *;
 
-#include "GParamManager.inl"
+
+template<typename T>
+inline CSTATUS GParamManager::create(const std::string& key) {
+    CGRAPH_FUNCTION_BEGIN
+
+    if (params_map_.find(key) != params_map_.end()) {
+        // 如果有，不重复创建
+        return STATUS_OK;
+    }
+
+    CGRAPH_WRITE_LOCK wLock(this->lock_);
+    T* ptr = new(std::nothrow) T();
+    CGRAPH_ASSERT_NOT_NULL(ptr)
+
+    params_map_.insert(std::pair<std::string, T*>(key, ptr));
+
+    
+    CGRAPH_FUNCTION_END
+}
 
 #endif
