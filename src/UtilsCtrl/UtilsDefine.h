@@ -9,6 +9,7 @@
 #include <string>
 #include <cstdarg>
 #include <thread>
+#include <time.h>
 
 using CGRAPH_READ_LOCK = std::shared_lock<std::shared_mutex>;
 using CGRAPH_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
@@ -24,25 +25,33 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
 #endif
 
     std::lock_guard<std::mutex> lock{ g_echo_mtx };
+
+
 #ifndef _WIN32
     // 非windows系统，打印到毫秒
-    timeb cur_time{};
-    char timeInfo[32] = {0};
-
-    ftime(&cur_time);
-    tm *ptm = localtime(&cur_time.time);
-    sprintf(timeInfo, " [%04d-%02d-%02d %02d:%02d:%02d.%03d] ",
-            ptm->tm_year+1900, ptm->tm_mon+1, ptm->tm_mday,
-            ptm->tm_hour, ptm->tm_min, ptm->tm_sec, cur_time.millitm);
-    std::cout << "[CGraph]" << timeInfo;
+    auto now = std::chrono::system_clock::now();
+    //通过不同精度获取相差的毫秒数
+    uint64_t disMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+                      - std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+    time_t tt = std::chrono::system_clock::to_time_t(now);
+    auto time_tm = localtime(&tt);
+    char strTime[32] = { 0 };
+    sprintf(strTime, " [%d-%02d-%02d %02d:%02d:%02d.%03d]", time_tm->tm_year + 1900,
+            time_tm->tm_mon + 1, time_tm->tm_mday, time_tm->tm_hour,
+            time_tm->tm_min, time_tm->tm_sec, (int)disMs);
+    std::cout << "[CGraph]" << strTime << " ";
 #else
     // windows系统，打印到秒
     time_t cur_time = time(nullptr);
-        std::string ct = ctime(&cur_time);
+    char time_buffer[32];
+    ctime_s(time_buffer,sizeof(time_buffer),&cur_time);
+    std::string ct(time_buffer);
+    ct.pop_back();// 去掉时间的最后一位\n信息
         std::cout << "[cgraph] ["
-                  << ct.assign(ct.begin(), ct.end()-1)    // 去掉时间的最后一位\n信息
+                  << ct  
                   << "] ";
 #endif
+
 
     va_list args;
     va_start(args, cmd);

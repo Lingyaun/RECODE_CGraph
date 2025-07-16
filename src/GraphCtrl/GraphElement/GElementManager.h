@@ -4,6 +4,7 @@
 #include"GElement.h"
 #include"GGroup/GCluster/GCluster.h"
 #include"../GraphThread/GraphThreadPool.h"
+
 class GElementManager :public CObject { 
 protected:
     explicit GElementManager();
