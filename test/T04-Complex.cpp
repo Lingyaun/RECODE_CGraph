@@ -3,7 +3,7 @@
 
 void tutorial_complex () {
     CSTATUS status = STATUS_OK;
-    GPipelinePtr pipeline = new GPipeline();
+    GPipelinePtr pipeline = GPipelineFactory::create();
     GElementPtr a, b_cluster, c, d_region, e = nullptr;
 
     b_cluster = pipeline->createGGroup<GCluster>({
@@ -39,6 +39,7 @@ void tutorial_complex () {
     }
     status = pipeline->deinit();
     //该图较为复杂，详情请看Complex.jpg
+    GPipelineFactory::destroy(pipeline);
     return;
 }
 

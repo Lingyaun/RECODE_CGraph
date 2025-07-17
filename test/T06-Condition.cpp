@@ -8,7 +8,7 @@
 int tutorial_condition() {
     /* 根据MyCondition的信息， */
     CSTATUS status = STATUS_OK;
-    GPipelinePtr pipeline = new GPipeline();
+    GPipelinePtr pipeline = GPipelineFactory::create();
     GElementPtr a, b_condition, c, d_condition = nullptr;
 
     b_condition = pipeline->createGGroup<MyCondition>({
@@ -44,7 +44,7 @@ int tutorial_condition() {
     if (STATUS_OK != status) {
         return status;    // 使用时，请对所有CGraph接口的返回值做判定。本例子中省略
     }
-    delete pipeline;
+    GPipelineFactory::destroy(pipeline);
     return status;
 }
 

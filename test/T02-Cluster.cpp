@@ -3,7 +3,7 @@
 
 void tutorial_cluster () {
     CSTATUS status = STATUS_OK;
-    GPipelinePtr pipeline = new GPipeline();
+    GPipelinePtr pipeline = GPipelineFactory::create();
     GElementPtr a, b_cluster, c, d = nullptr;
 
     b_cluster = pipeline->createGGroup<GCluster>({
@@ -28,7 +28,7 @@ void tutorial_cluster () {
     status = pipeline->init();            // 初始化 pipeline信息
     status = pipeline->run();             // 执行 pipeline信息
     status = pipeline->deinit();          // 逆初始化 pipeline信息
-    delete pipeline;
+    GPipelineFactory::destroy(pipeline);
 }
 
 int main () {

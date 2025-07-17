@@ -3,6 +3,7 @@
 
 #include "GraphThread/GraphThreadPool.h"
 #include "GraphElement/GElementInclude.h"
-#include "GraphPipeline/GPipeline.h"
+#include "GraphPipeline/GPipelineInclude.h"
 #include "GraphParam/GParamInclude.h"
+
 #endif //CGRAPH_GRAPHINCLUDE_H

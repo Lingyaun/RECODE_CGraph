@@ -3,7 +3,7 @@
 
 
 void tutorial_param() {
-    GPipelinePtr pipeline = new GPipeline();
+    GPipelinePtr pipeline = GPipelineFactory::create();
     CSTATUS status = STATUS_OK;
     GElementPtr a, b, c, d = nullptr;
 
@@ -26,7 +26,7 @@ void tutorial_param() {
 
     /* 图信息逆初始化，准备结束计算 */
     status = pipeline->deinit();
-    delete pipeline;
+    GPipelineFactory::destroy(pipeline);
 }
 
 int main() {

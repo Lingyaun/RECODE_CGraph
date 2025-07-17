@@ -14,10 +14,10 @@
 
 class GPipeline : public CObject {
 
-public:
+protected:
     explicit GPipeline();
     ~GPipeline() override;
-
+public:
     CSTATUS init() override;
     CSTATUS run() override;
     CSTATUS deinit() override;
@@ -57,8 +57,6 @@ public:
                              const std::string& name = "",
                              int loop = 1);
 
-protected:
-
 
 
 private:
@@ -67,6 +65,8 @@ private:
     GraphThreadPoolPtr thread_pool_;                        // 线程池类
     GElementPtrSet element_repository_;                     // 标记创建的所有节点，最终释放使用
     GParamManagerPtr param_manager_;                        // 参数管理类
+    
+    friend class GPipelineFactory;
 };
 
 using GPipelinePtr = GPipeline *;
