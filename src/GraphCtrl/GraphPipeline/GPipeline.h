@@ -75,6 +75,15 @@ using GPipelinePtrList = std::list<GPipelinePtr>;
 
 
 template<typename T>
+/**
+ * @brief 注册一个Element信息
+ * @tparam T
+ * @param elementRef - 注册的节点信息
+ * @param dependElements - 依赖的节点信息
+ * @param name - 节点名称
+ * @param loop -节点循环次数
+ * @return
+ */
 inline CSTATUS GPipeline::registerGElement(GElementPtr* elementRef,
                                     const GElementPtrSet& dependElements,
                                     const std::string& name,

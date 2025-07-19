@@ -12,6 +12,8 @@
 
 #include "../CObject/CObject.h"
 //这里删除了线程池的引入
+#include "ThreadPool/UThreadPoolDefine.h"
+
 using CGRAPH_READ_LOCK = std::shared_lock<std::shared_mutex>;
 using CGRAPH_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
 using CGRAPH_LOCK_GUARD = std::lock_guard<std::mutex>;
@@ -25,7 +27,7 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
     return;
 #endif
 
-    std::lock_guard<std::mutex> lock{ g_echo_mtx };
+    std::lock_guard<std::mutex> lock{ g_echo_mtx };//在当前作用域内创建 lock 对象时，立即锁定 g_echo_mtx，当 lock 离开作用域时（如函数返回），自动释放锁，无需手动调用 unlock()。
 
 
 #ifndef _WIN32
@@ -68,9 +70,11 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
 #define CGRAPH_FUNCTION_BEGIN           \
     CSTATUS status = STATUS_OK;         \
 
+
 /* 结束函数流程 */
 #define CGRAPH_FUNCTION_END             \
     return status;                      \
+
 
 /* 判断传入的指针信息是否为空 */
 #define CGRAPH_ASSERT_NOT_NULL(ptr)     \
@@ -78,13 +82,15 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
         return STATUS_RES;              \
     }                                   \
 
+
 /* 判断函数流程是否可以继续 */
 #define CGRAPH_FUNCTION_CHECK_STATUS    \
     if (STATUS_OK != status) {          \
         return status;                  \
     }                                   \
 
-/* 删除资源信息 */
+
+    /* 删除资源信息 */
 #define CGRAPH_DELETE_PTR(ptr)          \
     if ((ptr) != nullptr)               \
     {                                   \
@@ -92,11 +98,15 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
         (ptr) = nullptr;                \
     }                                   \
 
+
+    /* 判断初始化状态*/
 #define CGRAPH_ASSERT_INIT(isInit)      \
     if (isInit != is_init_) {           \
         return STATUS_ERR;              \
     }                                   \
 
+
+    /* 处理错误*/
 #define CGRAPH_PROCESS_ERROR            \
     return STATUS_ERR;                  \
 
@@ -115,6 +125,8 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
 #define CGRAPH_PARAM_READ_REGION(param)             \
     CGRAPH_READ_LOCK paramRLock(param->lock_);      \
 
+    
+/* 判断传入的指针信息是否为空*/
 #define CGRAPH_ASSERT_NOT_NULL_RETURN_NULL(ptr)     \
     if (nullptr == (ptr)) {                         \
         return nullptr;                             \

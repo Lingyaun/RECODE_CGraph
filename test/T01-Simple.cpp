@@ -4,10 +4,10 @@
 void tutorial_simple() {
     /* 创建图化 */
     GPipelinePtr pipeline = GPipelineFactory::create();
-    CSTATUS status = STATUS_OK;
+    CSTATUS status = STATUS_OK;//这只是一个状态量用来保证函数的正常运行
     GElementPtr a, b, c, d = nullptr;
 
-    /* 注册节点，其中MyNode1和MyNode2必须为GraphNode的子类，否则无法通过编译。
+    /* 注册节点，其中MyNode1和MyNode2必须为GNode的子类，否则无法通过编译。
      * MyNode1中run()执行内容为sleep(1s)
      * MyNode2中run()执行内容为sleep(2s) */
     status = pipeline->registerGElement<MyNode1>(&a, {}, "nodeA");    // 将名为nodeA，无执行依赖的node信息，注册入pipeline中
