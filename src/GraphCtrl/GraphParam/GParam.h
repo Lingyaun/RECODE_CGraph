@@ -8,7 +8,7 @@
 
 struct GParam : public CObject {
 public:
-    std::shared_mutex lock_;//读写锁
+    [[maybe_unused]] std::shared_mutex _param_shared_lock_;//读写锁
 
 private:
     CSTATUS run() override;

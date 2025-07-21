@@ -63,8 +63,24 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
     std::cout << "\n";
 }
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+//用于优化高频执行路径的代码布局，减少分支预测失败导致的流水线停滞。
+#define likely(x)   __builtin_expect(!!(x), 1)//明确告诉编译器，条件 x 很可能为真
+#define unlikely(x) __builtin_expect(!!(x), 0)//明确告诉编译器，条件 x 很可能为假
+
+template<typename T>
+inline T* SafeMallocCObject() {
+    T* ptr = nullptr;
+    while (!ptr && std::is_base_of_v<CObject, T>) {
+        ptr = new(std::nothrow) T();
+    }
+    return ptr;
+}
+
+
+/* 创建CObject对象 */
+#define CGRAPH_SAFE_MALLOC_COBJECT(TYPE)             \
+    SafeMallocCObject<TYPE>();                       \
+
 
 /* 开启函数流程 */
 #define CGRAPH_FUNCTION_BEGIN           \
@@ -118,12 +134,12 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
 
 /* 写入参数锁*/
 #define CGRAPH_PARAM_WRITE_REGION(param)            \
-    CGRAPH_WRITE_LOCK paramWLock(param->lock_);     \
+    CGRAPH_WRITE_LOCK paramWLock((param)->_param_shared_lock_);     \
 
 
 /* 读取参数锁*/
 #define CGRAPH_PARAM_READ_REGION(param)             \
-    CGRAPH_READ_LOCK paramRLock(param->lock_);      \
+    CGRAPH_READ_LOCK paramRLock((param)->_param_shared_lock_);      \
 
     
 /* 判断传入的指针信息是否为空*/
@@ -133,6 +149,14 @@ inline void CGRAPH_ECHO(const char *cmd, ...) {
     }                                               \
 
 
+/* 线程休眠毫秒 */
+#define CGRAPH_SLEEP_MILLISECOND(ms)                                    \
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));         \
+
+
+/* 线程休眠秒 */
+#define CGRAPH_SLEEP_SECOND(s)                                          \
+    std::this_thread::sleep_for(std::chrono::seconds(s));               \
 
     
 #endif //CGRAPH_UTILSDEFINE_H

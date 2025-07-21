@@ -10,7 +10,7 @@
 class UThreadBase : public UThreadObject { 
 protected:
     explicit UThreadBase(){
-        done_ = false;
+        done_ = true;
         is_init_ = false;
         is_running_ = false;
         pool_task_queue_ =nullptr;
@@ -57,7 +57,7 @@ protected:
         return (pool_task_queue_ && pool_task_queue_->tryMultiPop(tasks));
     }
 
-private:
+protected:
     bool done_;                                               // 线程状态标记
     bool is_init_;                                            // 标记初始化状态
     bool is_running_;                                         // 是否正在执行

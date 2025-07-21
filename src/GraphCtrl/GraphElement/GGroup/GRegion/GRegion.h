@@ -2,8 +2,7 @@
 #define GGRAPH_GREGION_H 
 
 #include"../GGroup.h"
-#include"../../GElementManager.h"
-
+#include "../../GElementManager.h"
 class GRegion : public GGroup { 
     protected:
     explicit GRegion();
@@ -19,11 +18,11 @@ class GRegion : public GGroup {
 
     CSTATUS addElement(GElementPtr element) override;
     
-     CSTATUS setThreadPool(GraphThreadPoolPtr pool);
+     CSTATUS setThreadPool(UThreadPoolPtr  pool);
     
 private:
     GElementManagerPtr manager_;
-    GraphThreadPoolPtr thread_pool_;    // 这里需要使用GPipeline类的线程池
+    UThreadPoolPtr thread_pool_;    // 这里需要使用GPipeline类的线程池
 
     friend class GPipeline;
 };

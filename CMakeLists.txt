@@ -12,11 +12,13 @@ set(TUTORIAL_LIST
         T04-Complex
         T05-Param
         T06-Condition
+        T07-MultiPipeline
+        T08-UThreadPool
         )
 
 # 编译libCGraph动态库
 add_library(CGraph SHARED ${SRC_LIST})
 
-foreach(tut ${TUTORIAL_LIST})
-    add_executable(${tut} test/${tut}.cpp ${SRC_LIST})
+foreach(tes ${TUTORIAL_LIST})
+    add_executable(${tes} test/${tes}.cpp ${SRC_LIST})
 endforeach()

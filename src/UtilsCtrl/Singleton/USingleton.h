@@ -1,24 +1,26 @@
-#ifndef CGRAPH_SINGLETON_H
-#define CGRAPH_SINGLETON_H
+#ifndef CGRAPH_USINGLETON_H
+#define CGRAPH_USINGLETON_H
 
 #include <shared_mutex>
 
-#include "../../CObject/CObject.h"
 #include "../UtilsDefine.h"
+#include "../../CObject/CObject.h"
+
 template<typename T>
-class Singleton : public CObject {
+class USingleton : public CObject {
 public:
-    explicit Singleton() {
+    explicit USingleton() {
         create();
     }
 
-    ~Singleton() override {
+    ~USingleton() override {
         destroy();
     }
 
     T* get() {
-        CGRAPH_READ_LOCK lock(lock_);
-        return handle_;
+        CGRAPH_LOCK_GUARD lock(lock_);
+        T* handle = handle_;
+        return handle;
     }
 
 protected:
@@ -35,7 +37,7 @@ protected:
         CGRAPH_FUNCTION_END
     }
 
-    CSTATUS run() {
+    CSTATUS run() override {
         CGRAPH_NO_SUPPORT
     }
 
@@ -50,7 +52,6 @@ private:
     T* handle_ { nullptr };
     std::mutex lock_;
 };
-
 
 
 #endif

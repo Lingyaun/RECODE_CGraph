@@ -18,10 +18,31 @@ protected:
     explicit GPipeline();
     ~GPipeline() override;
 public:
+   /**
+     * 初始化pipeline信息
+     * @return
+     */
     CSTATUS init() override;
+
+    /**
+     * 执行pipeline信息
+     * @return
+     */
     CSTATUS run() override;
+
+    /**
+     * 逆初始化pipeline信息
+     * @return
+     */
     CSTATUS deinit() override;
+
+    /**
+     * 一次性执行完成初始化，执行runTimes次，和逆初始化的过程
+     * @param runTimes
+     * @return
+     */
     CSTATUS process(int runTimes = 1);
+    
     /**
      * 根据传入的info信息，创建node节点
      * @tparam T
@@ -62,7 +83,7 @@ public:
 private:
     bool is_init_;                                          // 标志位
     GElementManagerPtr element_manager_;                    // 节点管理类（管理所有注册过的element信息）
-    GraphThreadPoolPtr thread_pool_;                        // 线程池类
+    UThreadPoolPtr thread_pool_;                            // 线程池类
     GElementPtrSet element_repository_;                     // 标记创建的所有节点，最终释放使用
     GParamManagerPtr param_manager_;                        // 参数管理类
     

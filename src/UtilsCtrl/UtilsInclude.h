@@ -2,7 +2,7 @@
 #define CGRAPH_UTILSINCLUDE_H
 
 #include "UtilsDefine.h"
-//这里删除线程池打破循环
-#include "Singleton/Singleton.h"
+#include "ThreadPool/UThreadPoolInclude.h"
+#include "Singleton/USingleton.h"
 
 #endif //CGRAPH_UTILSINCLUDE_H
