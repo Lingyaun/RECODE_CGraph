@@ -9,8 +9,8 @@ using CGRAPH_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
 using CGRAPH_LOCK_GUARD = std::lock_guard<std::mutex>;
 using CGRAPH_UNIQUE_LOCK = std::unique_lock<std::mutex>;
 
-// static const int CGRAPH_DEFAULT_THREAD_SIZE = std::max(1,(int)std::thread::hardware_concurrency());// 默认线程数至少为1
-static const int CGRAPH_DEFAULT_THREAD_SIZE = 20;//固定线程数测试用
+static const int CGRAPH_DEFAULT_THREAD_SIZE = std::max(1,(int)std::thread::hardware_concurrency());// 默认线程数至少为1
+// static const int CGRAPH_DEFAULT_THREAD_SIZE = 4;//固定线程数测试用
 static const int CGRAPH_MAX_THREAD_SIZE = CGRAPH_DEFAULT_THREAD_SIZE * 2 + 1;
 static const int CGRAPH_MAX_TASK_STEAL_RANGE = 2;            // 盗取机制相邻范围
 static const bool CGRAPH_BATCH_TASK_ENABLE = false;          // 是否开启批量任务功能
