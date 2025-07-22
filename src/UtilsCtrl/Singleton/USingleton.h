@@ -29,7 +29,7 @@ protected:
         if (nullptr == handle_) {
             CGRAPH_LOCK_GUARD lock(lock_);
             if (nullptr == handle_) {
-                handle_ = new(std::nothrow) T();
+                handle_ = CGRAPH_SAFE_MALLOC_COBJECT(T);
                 CGRAPH_ASSERT_NOT_NULL(handle_)
             }
         }

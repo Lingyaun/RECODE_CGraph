@@ -3,6 +3,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(CGraph)
 
+# 如果开启此宏定义，则CGraph执行过程中，不会在控制台打印任何信息
+# add_definitions(-D_CGRAPH_SILENCE_)
+
 file(GLOB_RECURSE SRC_LIST "./src/*.cpp")
 
 set(TUTORIAL_LIST

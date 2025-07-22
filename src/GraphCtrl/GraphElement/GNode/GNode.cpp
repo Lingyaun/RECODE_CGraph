@@ -33,8 +33,8 @@
     }
     
     CSTATUS GNode::process(bool isMock) {
-
         CGRAPH_FUNCTION_BEGIN
+
         status = this->beforeRun();
         CGRAPH_FUNCTION_CHECK_STATUS
 
@@ -45,6 +45,7 @@
         }
 
         status = this->afterRun();
+        
         CGRAPH_FUNCTION_END
     }
     
