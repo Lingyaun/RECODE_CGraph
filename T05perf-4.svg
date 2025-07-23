@@ -1,0 +1,2086 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="598" onload="init(evt)" viewBox="0 0 1200 598" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x="' + params.x + '"][y="' + params.y + '"]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add("hide");
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector("rect");
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == "unzoom") clearzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split("=");
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = "?";
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == "&")
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+		if (currentSearchTerm === null) return;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="598.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="581" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="581" > </text>
+<g id="frames">
+<g >
+<title>std::mutex::lock (15,727,272,570 samples, 4.33%)</title><rect x="162.7" y="341" width="51.1" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="165.71" y="351.5" >std::..</text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (2,353,535,330 samples, 0.65%)</title><rect x="1058.0" y="485" width="7.6" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="1061.00" y="495.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::stdio_sync_filebuf&lt;char, std::char_traits&lt;char&gt; &gt;::sync (50,505,050 samples, 0.01%)</title><rect x="1043.4" y="213" width="0.2" height="15.0" fill="rgb(225,94,22)" rx="2" ry="2" />
+<text  x="1046.39" y="223.5" ></text>
+</g>
+<g >
+<title>std::endl&lt;char, std::char_traits&lt;char&gt; &gt; (70,707,070 samples, 0.02%)</title><rect x="1044.3" y="213" width="0.2" height="15.0" fill="rgb(238,152,36)" rx="2" ry="2" />
+<text  x="1047.31" y="223.5" ></text>
+</g>
+<g >
+<title>std::__shared_mutex_pthread::unlock_shared (212,121,210 samples, 0.06%)</title><rect x="1036.0" y="165" width="0.7" height="15.0" fill="rgb(250,211,50)" rx="2" ry="2" />
+<text  x="1039.04" y="175.5" ></text>
+</g>
+<g >
+<title>CObject::~CObject (141,414,140 samples, 0.04%)</title><rect x="106.1" y="373" width="0.4" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="109.07" y="383.5" ></text>
+</g>
+<g >
+<title>schedule (56,848,484,280 samples, 15.65%)</title><rect x="757.6" y="309" width="184.6" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="760.57" y="319.5" >schedule</text>
+</g>
+<g >
+<title>std::deque&lt;UTaskWrapper, std::allocator&lt;UTaskWrapper&gt; &gt;::empty (121,212,120 samples, 0.03%)</title><rect x="326.3" y="373" width="0.4" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="329.34" y="383.5" ></text>
+</g>
+<g >
+<title>_IO_file_overflow@@GLIBC_2.2.5 (111,111,110 samples, 0.03%)</title><rect x="980.0" y="485" width="0.4" height="15.0" fill="rgb(239,157,37)" rx="2" ry="2" />
+<text  x="983.00" y="495.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;UThreadPrimary*, std::allocator&lt;UThreadPrimary*&gt; &gt;::operator[] (323,232,320 samples, 0.09%)</title><rect x="362.7" y="373" width="1.1" height="15.0" fill="rgb(249,204,48)" rx="2" ry="2" />
+<text  x="365.70" y="383.5" ></text>
+</g>
+<g >
+<title>std::function&lt;std::unique_ptr&lt;std::__future_base::_Result_base, std::__future_base::_Result_base::_Deleter&gt;  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="389" width="16.9" height="15.0" fill="rgb(241,170,40)" rx="2" ry="2" />
+<text  x="1032.51" y="399.5" ></text>
+</g>
+<g >
+<title>__check_object_size (191,919,190 samples, 0.05%)</title><rect x="995.3" y="405" width="0.6" height="15.0" fill="rgb(226,98,23)" rx="2" ry="2" />
+<text  x="998.29" y="415.5" ></text>
+</g>
+<g >
+<title>futex_wait_setup (282,828,280 samples, 0.08%)</title><rect x="1054.7" y="405" width="1.0" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="1057.75" y="415.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (171,717,170 samples, 0.05%)</title><rect x="998.6" y="389" width="0.5" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="1001.57" y="399.5" ></text>
+</g>
+<g >
+<title>fsnotify (262,626,260 samples, 0.07%)</title><rect x="992.1" y="421" width="0.9" height="15.0" fill="rgb(215,50,12)" rx="2" ry="2" />
+<text  x="995.11" y="431.5" ></text>
+</g>
+<g >
+<title>__x86_indirect_thunk_rax (191,919,190 samples, 0.05%)</title><rect x="942.2" y="325" width="0.7" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="945.23" y="335.5" ></text>
+</g>
+<g >
+<title>_IO_fwrite (60,606,060 samples, 0.02%)</title><rect x="1068.0" y="469" width="0.2" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="1070.97" y="479.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::size (40,404,040 samples, 0.01%)</title><rect x="1032.9" y="37" width="0.1" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="1035.89" y="47.5" ></text>
+</g>
+<g >
+<title>UThreadObject::UThreadObject (343,434,340 samples, 0.09%)</title><rect x="97.0" y="373" width="1.1" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="100.02" y="383.5" ></text>
+</g>
+<g >
+<title>UThreadBase::popPoolTask (202,020,200 samples, 0.06%)</title><rect x="69.6" y="405" width="0.6" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="72.59" y="415.5" ></text>
+</g>
+<g >
+<title>std::unique_lock&lt;std::shared_mutex&gt;::unlock (191,919,190 samples, 0.05%)</title><rect x="1042.2" y="181" width="0.6" height="15.0" fill="rgb(220,70,16)" rx="2" ry="2" />
+<text  x="1045.21" y="191.5" ></text>
+</g>
+<g >
+<title>pty_write_room (101,010,100 samples, 0.03%)</title><rect x="1026.3" y="389" width="0.3" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="1029.30" y="399.5" ></text>
+</g>
+<g >
+<title>std::unique_ptr&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::unique_ptr&lt;std::default_delete&lt;UTaskWrapper::implBase&gt;, void&gt; (151,515,150 samples, 0.04%)</title><rect x="965.1" y="389" width="0.5" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="968.10" y="399.5" ></text>
+</g>
+<g >
+<title>_IO_do_write@@GLIBC_2.2.5 (111,111,110 samples, 0.03%)</title><rect x="1069.9" y="517" width="0.3" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="1072.87" y="527.5" ></text>
+</g>
+<g >
+<title>std::__invoke_impl&lt;void, void  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="421" width="16.9" height="15.0" fill="rgb(227,101,24)" rx="2" ry="2" />
+<text  x="1032.51" y="431.5" ></text>
+</g>
+<g >
+<title>std::deque&lt;UTaskWrapper, std::allocator&lt;UTaskWrapper&gt; &gt;::empty (171,717,170 samples, 0.05%)</title><rect x="361.1" y="373" width="0.5" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="364.06" y="383.5" ></text>
+</g>
+<g >
+<title>std::unique_lock&lt;std::shared_mutex&gt;::~unique_lock (212,121,210 samples, 0.06%)</title><rect x="1042.1" y="197" width="0.7" height="15.0" fill="rgb(226,97,23)" rx="2" ry="2" />
+<text  x="1045.15" y="207.5" ></text>
+</g>
+<g >
+<title>std::_Head_base&lt;1ul, std::default_delete&lt;UTaskWrapper::implBase&gt;, true&gt;::_Head_base (80,808,080 samples, 0.02%)</title><rect x="101.3" y="309" width="0.3" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="104.32" y="319.5" ></text>
+</g>
+<g >
+<title>std::tuple&lt;UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::tuple&lt;UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt;, true&gt; (585,858,580 samples, 0.16%)</title><rect x="100.4" y="341" width="1.9" height="15.0" fill="rgb(215,47,11)" rx="2" ry="2" />
+<text  x="103.37" y="351.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_bucket_index (80,808,080 samples, 0.02%)</title><rect x="1037.6" y="133" width="0.3" height="15.0" fill="rgb(215,49,11)" rx="2" ry="2" />
+<text  x="1040.62" y="143.5" ></text>
+</g>
+<g >
+<title>wake_up_q (6,111,111,050 samples, 1.68%)</title><rect x="1169.6" y="421" width="19.8" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1172.56" y="431.5" ></text>
+</g>
+<g >
+<title>std::lock_guard&lt;std::mutex&gt;::~lock_guard (15,131,312,980 samples, 4.17%)</title><rect x="213.8" y="357" width="49.2" height="15.0" fill="rgb(221,75,18)" rx="2" ry="2" />
+<text  x="216.80" y="367.5" >std:..</text>
+</g>
+<g >
+<title>__GI___libc_write (13,585,858,450 samples, 3.74%)</title><rect x="984.8" y="501" width="44.1" height="15.0" fill="rgb(217,57,13)" rx="2" ry="2" />
+<text  x="987.76" y="511.5" >__GI..</text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (2,373,737,350 samples, 0.65%)</title><rect x="1048.2" y="485" width="7.7" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="1051.18" y="495.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;UTaskWrapper, UTaskWrapper&amp;, UTaskWrapper*&gt; (212,121,210 samples, 0.06%)</title><rect x="360.4" y="357" width="0.7" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="363.37" y="367.5" ></text>
+</g>
+<g >
+<title>finish_task_switch (80,808,080 samples, 0.02%)</title><rect x="165.9" y="181" width="0.2" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="168.86" y="191.5" ></text>
+</g>
+<g >
+<title>std::_Tuple_impl&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_M_head (1,090,909,080 samples, 0.30%)</title><rect x="143.4" y="309" width="3.6" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="146.42" y="319.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_local_data (70,707,070 samples, 0.02%)</title><rect x="1040.5" y="181" width="0.3" height="15.0" fill="rgb(214,42,10)" rx="2" ry="2" />
+<text  x="1043.54" y="191.5" ></text>
+</g>
+<g >
+<title>__sched_text_start (1,292,929,280 samples, 0.36%)</title><rect x="1050.5" y="373" width="4.2" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="1053.55" y="383.5" ></text>
+</g>
+<g >
+<title>__memcmp_avx2_movbe (40,404,040 samples, 0.01%)</title><rect x="1032.7" y="37" width="0.2" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="1035.73" y="47.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::find (545,454,540 samples, 0.15%)</title><rect x="1031.9" y="149" width="1.8" height="15.0" fill="rgb(244,181,43)" rx="2" ry="2" />
+<text  x="1034.91" y="159.5" ></text>
+</g>
+<g >
+<title>std::_Tuple_impl&lt;1ul, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_Tuple_impl (191,919,190 samples, 0.05%)</title><rect x="101.6" y="325" width="0.7" height="15.0" fill="rgb(223,86,20)" rx="2" ry="2" />
+<text  x="104.65" y="335.5" ></text>
+</g>
+<g >
+<title>std::_Head_base&lt;0ul, UTaskWrapper::implBase*, false&gt;::_M_head (80,808,080 samples, 0.02%)</title><rect x="143.2" y="309" width="0.2" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="146.15" y="319.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hashtable_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_equals (202,020,200 samples, 0.06%)</title><rect x="1038.2" y="101" width="0.7" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1041.21" y="111.5" ></text>
+</g>
+<g >
+<title>std::deque&lt;UTaskWrapper, std::allocator&lt;UTaskWrapper&gt; &gt;::empty (474,747,470 samples, 0.13%)</title><rect x="337.8" y="357" width="1.5" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="340.76" y="367.5" ></text>
+</g>
+<g >
+<title>do_syscall_64 (777,777,770 samples, 0.21%)</title><rect x="164.7" y="293" width="2.5" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="167.68" y="303.5" ></text>
+</g>
+<g >
+<title>finish_task_switch (1,282,828,270 samples, 0.35%)</title><rect x="1050.6" y="357" width="4.1" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="1053.58" y="367.5" ></text>
+</g>
+<g >
+<title>std::unique_lock&lt;std::shared_mutex&gt;::unique_lock (323,232,320 samples, 0.09%)</title><rect x="1041.1" y="197" width="1.0" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1044.06" y="207.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::runTask (80,808,080 samples, 0.02%)</title><rect x="979.4" y="421" width="0.3" height="15.0" fill="rgb(252,219,52)" rx="2" ry="2" />
+<text  x="982.44" y="431.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_unlock_usercnt (2,313,131,290 samples, 0.64%)</title><rect x="255.3" y="325" width="7.5" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="258.31" y="335.5" ></text>
+</g>
+<g >
+<title>std::_Hash_bytes (80,808,080 samples, 0.02%)</title><rect x="1033.3" y="101" width="0.2" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="1036.26" y="111.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_wrlock (2,999,999,970 samples, 0.83%)</title><rect x="1055.9" y="501" width="9.7" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="1058.90" y="511.5" ></text>
+</g>
+<g >
+<title>std::unique_ptr&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::unique_ptr&lt;std::default_delete&lt;UTaskWrapper::implBase&gt;, void&gt; (1,252,525,240 samples, 0.34%)</title><rect x="98.7" y="373" width="4.1" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="101.72" y="383.5" ></text>
+</g>
+<g >
+<title>futex_wait_queue_me (1,383,838,370 samples, 0.38%)</title><rect x="1060.0" y="405" width="4.5" height="15.0" fill="rgb(254,228,54)" rx="2" ry="2" />
+<text  x="1063.03" y="415.5" ></text>
+</g>
+<g >
+<title>[unknown] (50,505,050 samples, 0.01%)</title><rect x="1066.2" y="453" width="0.2" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="1069.23" y="463.5" ></text>
+</g>
+<g >
+<title>std::ostream::sentry::sentry (50,505,050 samples, 0.01%)</title><rect x="983.3" y="485" width="0.1" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="986.28" y="495.5" ></text>
+</g>
+<g >
+<title>std::__invoke&lt;std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="325" width="16.9" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="1032.51" y="335.5" ></text>
+</g>
+<g >
+<title>[libstdc++.so.6.0.25] (70,707,070 samples, 0.02%)</title><rect x="1069.6" y="453" width="0.2" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="1072.58" y="463.5" ></text>
+</g>
+<g >
+<title>__x64_sys_write (121,212,120 samples, 0.03%)</title><rect x="990.4" y="453" width="0.4" height="15.0" fill="rgb(246,189,45)" rx="2" ry="2" />
+<text  x="993.37" y="463.5" ></text>
+</g>
+<g >
+<title>[unknown] (1,262,626,250 samples, 0.35%)</title><rect x="979.8" y="501" width="4.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="982.80" y="511.5" ></text>
+</g>
+<g >
+<title>selinux_file_permission (323,232,320 samples, 0.09%)</title><rect x="993.7" y="405" width="1.1" height="15.0" fill="rgb(249,204,48)" rx="2" ry="2" />
+<text  x="996.75" y="415.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::runTask (279,343,431,550 samples, 76.90%)</title><rect x="70.4" y="405" width="907.5" height="15.0" fill="rgb(252,219,52)" rx="2" ry="2" />
+<text  x="73.44" y="415.5" >UThreadPrimary::runTask</text>
+</g>
+<g >
+<title>std::__shared_mutex_pthread::lock_shared (131,313,130 samples, 0.04%)</title><rect x="1035.6" y="165" width="0.4" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="1038.58" y="175.5" ></text>
+</g>
+<g >
+<title>std::unordered_map&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, GParam*, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt; &gt;::find (555,555,550 samples, 0.15%)</title><rect x="1031.9" y="165" width="1.8" height="15.0" fill="rgb(225,96,23)" rx="2" ry="2" />
+<text  x="1034.88" y="175.5" ></text>
+</g>
+<g >
+<title>std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="293" width="16.9" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="1032.51" y="303.5" ></text>
+</g>
+<g >
+<title>_IO_file_sync@@GLIBC_2.2.5 (60,606,060 samples, 0.02%)</title><rect x="984.1" y="501" width="0.2" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="987.13" y="511.5" ></text>
+</g>
+<g >
+<title>pthread_mutex_trylock@plt (121,212,120 samples, 0.03%)</title><rect x="313.6" y="341" width="0.4" height="15.0" fill="rgb(246,189,45)" rx="2" ry="2" />
+<text  x="316.61" y="351.5" ></text>
+</g>
+<g >
+<title>CObject::CObject (111,111,110 samples, 0.03%)</title><rect x="97.8" y="357" width="0.3" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="100.77" y="367.5" ></text>
+</g>
+<g >
+<title>__audit_syscall_exit (50,505,050 samples, 0.01%)</title><rect x="254.8" y="261" width="0.2" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="257.81" y="271.5" ></text>
+</g>
+<g >
+<title>std::thread::_Invoker&lt;std::tuple&lt;int  (298,292,926,310 samples, 82.12%)</title><rect x="10.7" y="485" width="969.0" height="15.0" fill="rgb(252,217,51)" rx="2" ry="2" />
+<text  x="13.72" y="495.5" >std::thread::_Invoker&lt;std::tuple&lt;int </text>
+</g>
+<g >
+<title>std::__detail::_Hash_code_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, true&gt;::_M_bucket_index (40,404,040 samples, 0.01%)</title><rect x="1032.0" y="117" width="0.2" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="1035.04" y="127.5" ></text>
+</g>
+<g >
+<title>std::shared_mutex::lock_shared (212,121,210 samples, 0.06%)</title><rect x="1035.3" y="181" width="0.7" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1038.32" y="191.5" ></text>
+</g>
+<g >
+<title>__sched_text_start (80,808,080 samples, 0.02%)</title><rect x="165.9" y="197" width="0.2" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="168.86" y="207.5" ></text>
+</g>
+<g >
+<title>CObject::~CObject (1,080,808,070 samples, 0.30%)</title><rect x="107.4" y="357" width="3.5" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="110.42" y="367.5" ></text>
+</g>
+<g >
+<title>std::num_put&lt;char, std::ostreambuf_iterator&lt;char, std::char_traits&lt;char&gt; &gt; &gt;::_M_insert_int&lt;long&gt; (50,505,050 samples, 0.01%)</title><rect x="1068.9" y="469" width="0.2" height="15.0" fill="rgb(223,82,19)" rx="2" ry="2" />
+<text  x="1071.92" y="479.5" ></text>
+</g>
+<g >
+<title>schedule (80,808,080 samples, 0.02%)</title><rect x="165.9" y="213" width="0.2" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="168.86" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::basic_string&lt;std::allocator&lt;char&gt; &gt; (343,434,340 samples, 0.09%)</title><rect x="1039.9" y="197" width="1.1" height="15.0" fill="rgb(209,22,5)" rx="2" ry="2" />
+<text  x="1042.85" y="207.5" ></text>
+</g>
+<g >
+<title>std::this_thread::yield (176,676,765,910 samples, 48.64%)</title><rect x="391.2" y="389" width="573.9" height="15.0" fill="rgb(231,123,29)" rx="2" ry="2" />
+<text  x="394.18" y="399.5" >std::this_thread::yield</text>
+</g>
+<g >
+<title>std::addressof&lt;char&gt; (40,404,040 samples, 0.01%)</title><rect x="1040.5" y="165" width="0.2" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="1043.54" y="175.5" ></text>
+</g>
+<g >
+<title>GParamManager::get (727,272,720 samples, 0.20%)</title><rect x="1037.2" y="181" width="2.4" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="1040.19" y="191.5" ></text>
+</g>
+<g >
+<title>std::call_once&lt;void  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="485" width="16.9" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1032.51" y="495.5" ></text>
+</g>
+<g >
+<title>futex_wait (1,737,373,720 samples, 0.48%)</title><rect x="1059.7" y="421" width="5.6" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="1062.67" y="431.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;UTaskWrapper, UTaskWrapper&amp;, UTaskWrapper*&gt; (464,646,460 samples, 0.13%)</title><rect x="274.9" y="341" width="1.5" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="277.86" y="351.5" ></text>
+</g>
+<g >
+<title>__audit_syscall_exit (60,606,060 samples, 0.02%)</title><rect x="1028.6" y="437" width="0.2" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="1031.56" y="447.5" ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (12,686,868,560 samples, 3.49%)</title><rect x="987.6" y="485" width="41.2" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="990.61" y="495.5" >ent..</text>
+</g>
+<g >
+<title>__x86_indirect_thunk_rax (131,313,130 samples, 0.04%)</title><rect x="559.4" y="357" width="0.4" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="562.41" y="367.5" ></text>
+</g>
+<g >
+<title>UWorkStealingQueue::tryPop (17,232,323,060 samples, 4.74%)</title><rect x="270.4" y="373" width="55.9" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="273.37" y="383.5" >UWork..</text>
+</g>
+<g >
+<title>std::num_put&lt;char, std::ostreambuf_iterator&lt;char, std::char_traits&lt;char&gt; &gt; &gt;::do_put (141,414,140 samples, 0.04%)</title><rect x="1069.1" y="469" width="0.4" height="15.0" fill="rgb(243,175,41)" rx="2" ry="2" />
+<text  x="1072.09" y="479.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::stealTask (11,535,353,420 samples, 3.18%)</title><rect x="327.7" y="389" width="37.4" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="330.66" y="399.5" >UTh..</text>
+</g>
+<g >
+<title>std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;::~basic_ostream (707,070,700 samples, 0.19%)</title><rect x="1065.7" y="501" width="2.3" height="15.0" fill="rgb(205,2,0)" rx="2" ry="2" />
+<text  x="1068.67" y="511.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_trylock (4,949,494,900 samples, 1.36%)</title><rect x="282.7" y="341" width="16.0" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="285.67" y="351.5" ></text>
+</g>
+<g >
+<title>UAtomicQueue&lt;UTaskWrapper&gt;::tryPop (33,121,211,790 samples, 9.12%)</title><rect x="159.6" y="373" width="107.6" height="15.0" fill="rgb(240,165,39)" rx="2" ry="2" />
+<text  x="162.59" y="383.5" >UAtomicQueue&lt;..</text>
+</g>
+<g >
+<title>__dynamic_cast (60,606,060 samples, 0.02%)</title><rect x="1033.7" y="197" width="0.2" height="15.0" fill="rgb(227,102,24)" rx="2" ry="2" />
+<text  x="1036.75" y="207.5" ></text>
+</g>
+<g >
+<title>_IO_file_xsputn@@GLIBC_2.2.5 (141,414,140 samples, 0.04%)</title><rect x="1070.6" y="517" width="0.4" height="15.0" fill="rgb(242,171,41)" rx="2" ry="2" />
+<text  x="1073.56" y="527.5" ></text>
+</g>
+<g >
+<title>UTaskWrapper::~UTaskWrapper (5,454,545,400 samples, 1.50%)</title><rect x="51.9" y="405" width="17.7" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="54.87" y="415.5" ></text>
+</g>
+<g >
+<title>__overflow (60,606,060 samples, 0.02%)</title><rect x="982.7" y="485" width="0.2" height="15.0" fill="rgb(225,94,22)" rx="2" ry="2" />
+<text  x="985.69" y="495.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::stdio_sync_filebuf&lt;char, std::char_traits&lt;char&gt; &gt;::overflow (111,111,110 samples, 0.03%)</title><rect x="982.3" y="485" width="0.4" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="985.33" y="495.5" ></text>
+</g>
+<g >
+<title>__x64_sys_futex (10,666,666,560 samples, 2.94%)</title><rect x="220.1" y="277" width="34.6" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="223.10" y="287.5" >__..</text>
+</g>
+<g >
+<title>std::_Head_base&lt;0ul, UTaskWrapper::implBase*, false&gt;::_Head_base (151,515,150 samples, 0.04%)</title><rect x="100.5" y="325" width="0.5" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="103.46" y="335.5" ></text>
+</g>
+<g >
+<title>mutex_trylock (40,404,040 samples, 0.01%)</title><rect x="1028.3" y="389" width="0.2" height="15.0" fill="rgb(250,207,49)" rx="2" ry="2" />
+<text  x="1031.33" y="399.5" ></text>
+</g>
+<g >
+<title>[unknown] (121,212,120 samples, 0.03%)</title><rect x="10.3" y="501" width="0.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="13.33" y="511.5" ></text>
+</g>
+<g >
+<title>std::mutex::unlock (101,010,100 samples, 0.03%)</title><rect x="327.3" y="373" width="0.4" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="330.33" y="383.5" ></text>
+</g>
+<g >
+<title>syscall_slow_exit_work (70,707,070 samples, 0.02%)</title><rect x="1189.4" y="469" width="0.2" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="1192.41" y="479.5" ></text>
+</g>
+<g >
+<title>__x64_sys_sched_yield (75,555,554,800 samples, 20.80%)</title><rect x="696.8" y="325" width="245.4" height="15.0" fill="rgb(209,18,4)" rx="2" ry="2" />
+<text  x="699.80" y="335.5" >__x64_sys_sched_yield</text>
+</g>
+<g >
+<title>do_syscall_64 (7,808,080,730 samples, 2.15%)</title><rect x="1164.4" y="485" width="25.3" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="1167.37" y="495.5" >d..</text>
+</g>
+<g >
+<title>std::ostream::put (121,212,120 samples, 0.03%)</title><rect x="982.9" y="485" width="0.4" height="15.0" fill="rgb(219,64,15)" rx="2" ry="2" />
+<text  x="985.89" y="495.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (404,040,400 samples, 0.11%)</title><rect x="345.3" y="341" width="1.3" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="348.31" y="351.5" ></text>
+</g>
+<g >
+<title>__fget_light (282,828,280 samples, 0.08%)</title><rect x="990.8" y="421" width="0.9" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="993.83" y="431.5" ></text>
+</g>
+<g >
+<title>pthread_mutex_unlock@plt (40,404,040 samples, 0.01%)</title><rect x="262.8" y="325" width="0.2" height="15.0" fill="rgb(247,194,46)" rx="2" ry="2" />
+<text  x="265.82" y="335.5" ></text>
+</g>
+<g >
+<title>std::__invoke&lt;void  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="437" width="16.9" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="1032.51" y="447.5" ></text>
+</g>
+<g >
+<title>[unknown] (80,808,080 samples, 0.02%)</title><rect x="1066.2" y="469" width="0.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="1069.23" y="479.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_bucket_index (70,707,070 samples, 0.02%)</title><rect x="1032.0" y="133" width="0.2" height="15.0" fill="rgb(215,49,11)" rx="2" ry="2" />
+<text  x="1035.01" y="143.5" ></text>
+</g>
+<g >
+<title>std::queue&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::deque&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::allocator&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt; &gt; &gt; &gt;::empty (979,797,970 samples, 0.27%)</title><rect x="264.0" y="357" width="3.2" height="15.0" fill="rgb(235,141,33)" rx="2" ry="2" />
+<text  x="267.00" y="367.5" ></text>
+</g>
+<g >
+<title>do_futex (404,040,400 samples, 0.11%)</title><rect x="165.8" y="261" width="1.3" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="168.79" y="271.5" ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (124,636,362,390 samples, 34.31%)</title><rect x="559.8" y="357" width="404.9" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="562.84" y="367.5" >entry_SYSCALL_64_after_hwframe</text>
+</g>
+<g >
+<title>do_futex (6,717,171,650 samples, 1.85%)</title><rect x="1167.6" y="453" width="21.8" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="1170.59" y="463.5" >d..</text>
+</g>
+<g >
+<title>mutex_unlock (50,505,050 samples, 0.01%)</title><rect x="1000.9" y="389" width="0.2" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="1003.90" y="399.5" ></text>
+</g>
+<g >
+<title>wake_up_q (10,080,807,980 samples, 2.78%)</title><rect x="222.0" y="229" width="32.7" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="225.00" y="239.5" >wa..</text>
+</g>
+<g >
+<title>__x64_sys_futex (1,828,282,810 samples, 0.50%)</title><rect x="1059.4" y="453" width="5.9" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="1062.37" y="463.5" ></text>
+</g>
+<g >
+<title>std::ostream::sentry::sentry (50,505,050 samples, 0.01%)</title><rect x="1066.2" y="437" width="0.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="1069.23" y="447.5" ></text>
+</g>
+<g >
+<title>__strlen_avx2 (232,323,230 samples, 0.06%)</title><rect x="1066.5" y="469" width="0.7" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="1069.49" y="479.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (222,222,220 samples, 0.06%)</title><rect x="1002.3" y="373" width="0.8" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="1005.35" y="383.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hash_code_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, true&gt;::_M_hash_code (171,717,170 samples, 0.05%)</title><rect x="1038.9" y="133" width="0.5" height="15.0" fill="rgb(244,182,43)" rx="2" ry="2" />
+<text  x="1041.87" y="143.5" ></text>
+</g>
+<g >
+<title>syscall_trace_enter (1,909,090,890 samples, 0.53%)</title><rect x="958.5" y="325" width="6.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="961.51" y="335.5" ></text>
+</g>
+<g >
+<title>__gthread_yield (7,141,414,070 samples, 1.97%)</title><rect x="368.0" y="389" width="23.1" height="15.0" fill="rgb(218,61,14)" rx="2" ry="2" />
+<text  x="370.95" y="399.5" >_..</text>
+</g>
+<g >
+<title>futex_wake (10,595,959,490 samples, 2.92%)</title><rect x="220.3" y="245" width="34.4" height="15.0" fill="rgb(219,65,15)" rx="2" ry="2" />
+<text  x="223.33" y="255.5" >fu..</text>
+</g>
+<g >
+<title>[unknown] (585,858,580 samples, 0.16%)</title><rect x="1068.0" y="485" width="1.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="1070.97" y="495.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (111,111,110 samples, 0.03%)</title><rect x="273.8" y="357" width="0.3" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="276.78" y="367.5" ></text>
+</g>
+<g >
+<title>__sched_text_start (54,575,757,030 samples, 15.02%)</title><rect x="764.9" y="293" width="177.3" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="767.95" y="303.5" >__sched_text_start</text>
+</g>
+<g >
+<title>__gthread_mutex_lock (121,212,120 samples, 0.03%)</title><rect x="162.3" y="341" width="0.4" height="15.0" fill="rgb(228,107,25)" rx="2" ry="2" />
+<text  x="165.32" y="351.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct_aux&lt;char const*&gt; (171,717,170 samples, 0.05%)</title><rect x="1039.9" y="165" width="0.6" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="1042.92" y="175.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (10,080,807,980 samples, 2.78%)</title><rect x="222.0" y="197" width="32.7" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="225.00" y="207.5" >_r..</text>
+</g>
+<g >
+<title>_IO_file_write@@GLIBC_2.2.5 (40,404,040 samples, 0.01%)</title><rect x="1070.4" y="517" width="0.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1073.43" y="527.5" ></text>
+</g>
+<g >
+<title>std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="277" width="16.9" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="1032.51" y="287.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::run (298,212,118,230 samples, 82.09%)</title><rect x="10.7" y="421" width="968.7" height="15.0" fill="rgb(206,4,1)" rx="2" ry="2" />
+<text  x="13.72" y="431.5" >UThreadPrimary::run</text>
+</g>
+<g >
+<title>std::__get_helper&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt; (1,464,646,450 samples, 0.40%)</title><rect x="142.2" y="325" width="4.8" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="145.20" y="335.5" ></text>
+</g>
+<g >
+<title>hash_futex (50,505,050 samples, 0.01%)</title><rect x="221.8" y="229" width="0.2" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="224.84" y="239.5" ></text>
+</g>
+<g >
+<title>std::shared_lock&lt;std::shared_mutex&gt;::~shared_lock (222,222,220 samples, 0.06%)</title><rect x="1036.0" y="197" width="0.7" height="15.0" fill="rgb(239,158,38)" rx="2" ry="2" />
+<text  x="1039.01" y="207.5" ></text>
+</g>
+<g >
+<title>std::mutex::lock (171,717,170 samples, 0.05%)</title><rect x="263.0" y="357" width="0.5" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="265.95" y="367.5" ></text>
+</g>
+<g >
+<title>tty_write_lock (40,404,040 samples, 0.01%)</title><rect x="1028.3" y="405" width="0.2" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="1031.33" y="415.5" ></text>
+</g>
+<g >
+<title>do_sched_yield (15,757,575,600 samples, 4.34%)</title><rect x="706.4" y="309" width="51.2" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="709.38" y="319.5" >do_sc..</text>
+</g>
+<g >
+<title>syscall_trace_enter (70,707,070 samples, 0.02%)</title><rect x="255.0" y="277" width="0.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="257.98" y="287.5" ></text>
+</g>
+<g >
+<title>do_syscall_64 (11,343,434,230 samples, 3.12%)</title><rect x="218.4" y="293" width="36.8" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="221.36" y="303.5" >do_..</text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (60,606,060 samples, 0.02%)</title><rect x="214.5" y="341" width="0.2" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="217.52" y="351.5" ></text>
+</g>
+<g >
+<title>std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;::operator (70,707,070 samples, 0.02%)</title><rect x="1038.5" y="69" width="0.3" height="15.0" fill="rgb(245,188,45)" rx="2" ry="2" />
+<text  x="1041.54" y="79.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_unlock_usercnt (4,050,505,010 samples, 1.12%)</title><rect x="346.6" y="341" width="13.2" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="349.62" y="351.5" ></text>
+</g>
+<g >
+<title>dput (60,606,060 samples, 0.02%)</title><rect x="957.1" y="277" width="0.2" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="960.13" y="287.5" ></text>
+</g>
+<g >
+<title>std::__ostream_insert&lt;char, std::char_traits&lt;char&gt; &gt; (121,212,120 samples, 0.03%)</title><rect x="1068.5" y="469" width="0.4" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="1071.53" y="479.5" ></text>
+</g>
+<g >
+<title>std::__shared_mutex_pthread::unlock (80,808,080 samples, 0.02%)</title><rect x="1042.6" y="149" width="0.2" height="15.0" fill="rgb(240,164,39)" rx="2" ry="2" />
+<text  x="1045.57" y="159.5" ></text>
+</g>
+<g >
+<title>UWorkStealingQueue::trySteal (434,343,430 samples, 0.12%)</title><rect x="366.5" y="389" width="1.5" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="369.54" y="399.5" ></text>
+</g>
+<g >
+<title>std::_Tuple_impl&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_Tuple_impl (141,414,140 samples, 0.04%)</title><rect x="99.9" y="341" width="0.5" height="15.0" fill="rgb(253,222,53)" rx="2" ry="2" />
+<text  x="102.91" y="351.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned_erms (151,515,150 samples, 0.04%)</title><rect x="1072.5" y="517" width="0.5" height="15.0" fill="rgb(205,0,0)" rx="2" ry="2" />
+<text  x="1075.47" y="527.5" ></text>
+</g>
+<g >
+<title>futex_wait_setup (303,030,300 samples, 0.08%)</title><rect x="166.1" y="229" width="1.0" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="169.12" y="239.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_trylock (27,131,312,860 samples, 7.47%)</title><rect x="1073.3" y="517" width="88.2" height="15.0" fill="rgb(252,220,52)" rx="2" ry="2" />
+<text  x="1076.32" y="527.5" >__pthread_..</text>
+</g>
+<g >
+<title>do_syscall_64 (12,686,868,560 samples, 3.49%)</title><rect x="987.6" y="469" width="41.2" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="990.61" y="479.5" >do_..</text>
+</g>
+<g >
+<title>pthread_mutex_unlock@plt (70,707,070 samples, 0.02%)</title><rect x="325.7" y="341" width="0.2" height="15.0" fill="rgb(247,194,46)" rx="2" ry="2" />
+<text  x="328.69" y="351.5" ></text>
+</g>
+<g >
+<title>[libc-2.28.so] (101,010,100 samples, 0.03%)</title><rect x="10.0" y="517" width="0.3" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="13.00" y="527.5" ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (777,777,770 samples, 0.21%)</title><rect x="164.7" y="309" width="2.5" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="167.68" y="319.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char const*&gt; (131,313,130 samples, 0.04%)</title><rect x="1034.1" y="181" width="0.4" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1037.11" y="191.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;&amp;, std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;*&gt; (292,929,290 samples, 0.08%)</title><rect x="264.7" y="325" width="1.0" height="15.0" fill="rgb(244,183,43)" rx="2" ry="2" />
+<text  x="267.72" y="335.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_find_node (303,030,300 samples, 0.08%)</title><rect x="1037.9" y="133" width="1.0" height="15.0" fill="rgb(229,114,27)" rx="2" ry="2" />
+<text  x="1040.88" y="143.5" ></text>
+</g>
+<g >
+<title>std::__invoke_impl&lt;int, std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="309" width="16.9" height="15.0" fill="rgb(207,12,2)" rx="2" ry="2" />
+<text  x="1032.51" y="319.5" ></text>
+</g>
+<g >
+<title>syscall_slow_exit_work (60,606,060 samples, 0.02%)</title><rect x="1028.6" y="453" width="0.2" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="1031.56" y="463.5" ></text>
+</g>
+<g >
+<title>std::thread::_Invoker&lt;std::tuple&lt;int  (298,292,926,310 samples, 82.12%)</title><rect x="10.7" y="469" width="969.0" height="15.0" fill="rgb(252,217,51)" rx="2" ry="2" />
+<text  x="13.72" y="479.5" >std::thread::_Invoker&lt;std::tuple&lt;int </text>
+</g>
+<g >
+<title>std::get&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt; (4,808,080,760 samples, 1.32%)</title><rect x="131.3" y="341" width="15.7" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="134.34" y="351.5" ></text>
+</g>
+<g >
+<title>std::mutex::try_lock (161,616,160 samples, 0.04%)</title><rect x="361.6" y="373" width="0.5" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="364.62" y="383.5" ></text>
+</g>
+<g >
+<title>ksys_write (11,626,262,510 samples, 3.20%)</title><rect x="990.8" y="453" width="37.8" height="15.0" fill="rgb(205,4,1)" rx="2" ry="2" />
+<text  x="993.80" y="463.5" >ksy..</text>
+</g>
+<g >
+<title>std::__invoke&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="261" width="16.9" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="1032.51" y="271.5" ></text>
+</g>
+<g >
+<title>syscall_slow_exit_work (50,505,050 samples, 0.01%)</title><rect x="1065.3" y="453" width="0.2" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="1068.35" y="463.5" ></text>
+</g>
+<g >
+<title>std::__ostream_insert&lt;char, std::char_traits&lt;char&gt; &gt; (121,212,120 samples, 0.03%)</title><rect x="1067.2" y="469" width="0.4" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="1070.25" y="479.5" ></text>
+</g>
+<g >
+<title>__x64_sys_futex (1,939,393,920 samples, 0.53%)</title><rect x="1049.4" y="453" width="6.3" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="1052.37" y="463.5" ></text>
+</g>
+<g >
+<title>all (363,252,521,620 samples, 100%)</title><rect x="10.0" y="549" width="1180.0" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="13.00" y="559.5" ></text>
+</g>
+<g >
+<title>__pthread_once_slow (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="501" width="16.9" height="15.0" fill="rgb(206,7,1)" rx="2" ry="2" />
+<text  x="1032.51" y="511.5" ></text>
+</g>
+<g >
+<title>do_syscall_64 (124,636,362,390 samples, 34.31%)</title><rect x="559.8" y="341" width="404.9" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="562.84" y="351.5" >do_syscall_64</text>
+</g>
+<g >
+<title>std::mutex::unlock (5,020,201,970 samples, 1.38%)</title><rect x="344.1" y="357" width="16.3" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="347.06" y="367.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Equal_helper&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, unsigned long, true&gt;::_S_equals (171,717,170 samples, 0.05%)</title><rect x="1038.2" y="85" width="0.6" height="15.0" fill="rgb(235,141,33)" rx="2" ry="2" />
+<text  x="1041.21" y="95.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hash_code_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, true&gt;::_M_hash_code (141,414,140 samples, 0.04%)</title><rect x="1033.1" y="133" width="0.5" height="15.0" fill="rgb(244,182,43)" rx="2" ry="2" />
+<text  x="1036.12" y="143.5" ></text>
+</g>
+<g >
+<title>__x64_sys_futex (6,848,484,780 samples, 1.89%)</title><rect x="1167.2" y="469" width="22.2" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="1170.16" y="479.5" >_..</text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (90,909,090 samples, 0.03%)</title><rect x="996.0" y="389" width="0.3" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="998.98" y="399.5" ></text>
+</g>
+<g >
+<title>std::mutex::unlock (3,666,666,630 samples, 1.01%)</title><rect x="314.0" y="357" width="11.9" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="317.01" y="367.5" ></text>
+</g>
+<g >
+<title>futex_wait_queue_me (80,808,080 samples, 0.02%)</title><rect x="165.9" y="229" width="0.2" height="15.0" fill="rgb(254,228,54)" rx="2" ry="2" />
+<text  x="168.86" y="239.5" ></text>
+</g>
+<g >
+<title>syscall_slow_exit_work (70,707,070 samples, 0.02%)</title><rect x="254.7" y="277" width="0.3" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="257.75" y="287.5" ></text>
+</g>
+<g >
+<title>GElement::getGParam&lt;MyParam1&gt; (747,474,740 samples, 0.21%)</title><rect x="1037.2" y="197" width="2.4" height="15.0" fill="rgb(212,34,8)" rx="2" ry="2" />
+<text  x="1040.19" y="207.5" ></text>
+</g>
+<g >
+<title>futex_wait_setup (242,424,240 samples, 0.07%)</title><rect x="1064.5" y="405" width="0.8" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="1067.53" y="415.5" ></text>
+</g>
+<g >
+<title>tty_buffer_space_avail (232,323,230 samples, 0.06%)</title><rect x="1026.7" y="389" width="0.7" height="15.0" fill="rgb(220,69,16)" rx="2" ry="2" />
+<text  x="1029.66" y="399.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::end (40,404,040 samples, 0.01%)</title><rect x="1031.7" y="149" width="0.2" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="1034.75" y="159.5" ></text>
+</g>
+<g >
+<title>_IO_fwrite (272,727,270 samples, 0.08%)</title><rect x="1071.0" y="517" width="0.9" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="1074.02" y="527.5" ></text>
+</g>
+<g >
+<title>pthread_mutex_lock@plt (111,111,110 samples, 0.03%)</title><rect x="213.4" y="325" width="0.4" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="216.44" y="335.5" ></text>
+</g>
+<g >
+<title>std::__addressof&lt;char&gt; (60,606,060 samples, 0.02%)</title><rect x="1034.7" y="149" width="0.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="1037.73" y="159.5" ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (11,343,434,230 samples, 3.12%)</title><rect x="218.4" y="309" width="36.8" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="221.36" y="319.5" >ent..</text>
+</g>
+<g >
+<title>std::shared_mutex::lock (161,616,160 samples, 0.04%)</title><rect x="1041.6" y="165" width="0.5" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="1044.59" y="175.5" ></text>
+</g>
+<g >
+<title>pty_write (313,131,310 samples, 0.09%)</title><rect x="999.3" y="373" width="1.0" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="1002.29" y="383.5" ></text>
+</g>
+<g >
+<title>std::__future_base::_State_baseV2::_M_do_set (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="405" width="16.9" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="1032.51" y="415.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_local_data (131,313,130 samples, 0.04%)</title><rect x="1034.5" y="181" width="0.5" height="15.0" fill="rgb(214,42,10)" rx="2" ry="2" />
+<text  x="1037.53" y="191.5" ></text>
+</g>
+<g >
+<title>[unknown] (27,757,575,480 samples, 7.64%)</title><rect x="979.7" y="517" width="90.2" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="982.71" y="527.5" >[unknown]</text>
+</g>
+<g >
+<title>std::operator==&lt;UTaskWrapper, UTaskWrapper&amp;, UTaskWrapper*&gt; (262,626,260 samples, 0.07%)</title><rect x="338.5" y="341" width="0.8" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="341.45" y="351.5" ></text>
+</g>
+<g >
+<title>_raw_spin_lock (70,707,070 samples, 0.02%)</title><rect x="166.5" y="213" width="0.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="169.52" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char const*&gt; (171,717,170 samples, 0.05%)</title><rect x="1039.9" y="181" width="0.6" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1042.92" y="191.5" ></text>
+</g>
+<g >
+<title>virtual thunk to std::basic_ostream&lt;char, std::char_traits&lt;char&gt; &gt;::~basic_ostream (585,858,580 samples, 0.16%)</title><rect x="1068.0" y="501" width="1.9" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="1070.97" y="511.5" ></text>
+</g>
+<g >
+<title>ktime_get_coarse_real_ts64 (141,414,140 samples, 0.04%)</title><rect x="964.3" y="309" width="0.4" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="967.25" y="319.5" ></text>
+</g>
+<g >
+<title>__fdget_pos (282,828,280 samples, 0.08%)</title><rect x="990.8" y="437" width="0.9" height="15.0" fill="rgb(216,55,13)" rx="2" ry="2" />
+<text  x="993.83" y="447.5" ></text>
+</g>
+<g >
+<title>try_to_wake_up (10,080,807,980 samples, 2.78%)</title><rect x="222.0" y="213" width="32.7" height="15.0" fill="rgb(220,70,16)" rx="2" ry="2" />
+<text  x="225.00" y="223.5" >tr..</text>
+</g>
+<g >
+<title>mutex_lock (101,010,100 samples, 0.03%)</title><rect x="1000.6" y="389" width="0.3" height="15.0" fill="rgb(217,57,13)" rx="2" ry="2" />
+<text  x="1003.57" y="399.5" ></text>
+</g>
+<g >
+<title>std::__future_base::_Task_setter&lt;std::unique_ptr&lt;std::__future_base::_Result&lt;int&gt;, std::__future_base::_Result_base::_Deleter&gt;, std::__future_base::_Task_state&lt;std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="357" width="16.9" height="15.0" fill="rgb(226,100,23)" rx="2" ry="2" />
+<text  x="1032.51" y="367.5" ></text>
+</g>
+<g >
+<title>GElement::getGParam&lt;MyParam1&gt; (656,565,650 samples, 0.18%)</title><rect x="1031.6" y="197" width="2.1" height="15.0" fill="rgb(212,34,8)" rx="2" ry="2" />
+<text  x="1034.61" y="207.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_find_before_node (242,424,240 samples, 0.07%)</title><rect x="1032.3" y="117" width="0.8" height="15.0" fill="rgb(215,49,11)" rx="2" ry="2" />
+<text  x="1035.30" y="127.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_trylock (474,747,470 samples, 0.13%)</title><rect x="341.9" y="341" width="1.5" height="15.0" fill="rgb(252,220,52)" rx="2" ry="2" />
+<text  x="344.86" y="351.5" ></text>
+</g>
+<g >
+<title>native_queued_spin_lock_slowpath (212,121,210 samples, 0.06%)</title><rect x="221.1" y="213" width="0.7" height="15.0" fill="rgb(238,153,36)" rx="2" ry="2" />
+<text  x="224.08" y="223.5" ></text>
+</g>
+<g >
+<title>get_futex_value_locked (101,010,100 samples, 0.03%)</title><rect x="166.7" y="213" width="0.4" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="169.74" y="223.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (131,313,130 samples, 0.04%)</title><rect x="340.4" y="341" width="0.4" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="343.36" y="351.5" ></text>
+</g>
+<g >
+<title>std::operator&lt;&lt; &lt;std::char_traits&lt;char&gt; &gt;@plt (50,505,050 samples, 0.01%)</title><rect x="1045.2" y="213" width="0.2" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="1048.23" y="223.5" ></text>
+</g>
+<g >
+<title>do_futex (1,777,777,760 samples, 0.49%)</title><rect x="1059.5" y="437" width="5.8" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="1062.54" y="447.5" ></text>
+</g>
+<g >
+<title>MyReadParamNode::run (1,727,272,710 samples, 0.48%)</title><rect x="1031.2" y="213" width="5.6" height="15.0" fill="rgb(247,196,46)" rx="2" ry="2" />
+<text  x="1034.19" y="223.5" ></text>
+</g>
+<g >
+<title>std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;::operator (131,313,130 samples, 0.04%)</title><rect x="1039.0" y="117" width="0.4" height="15.0" fill="rgb(225,93,22)" rx="2" ry="2" />
+<text  x="1042.00" y="127.5" ></text>
+</g>
+<g >
+<title>copy_user_generic_unrolled (262,626,260 samples, 0.07%)</title><rect x="996.3" y="389" width="0.9" height="15.0" fill="rgb(224,89,21)" rx="2" ry="2" />
+<text  x="999.34" y="399.5" ></text>
+</g>
+<g >
+<title>std::ostream::_M_insert&lt;long&gt; (101,010,100 samples, 0.03%)</title><rect x="1069.5" y="469" width="0.4" height="15.0" fill="rgb(224,88,21)" rx="2" ry="2" />
+<text  x="1072.55" y="479.5" ></text>
+</g>
+<g >
+<title>avc_has_perm (111,111,110 samples, 0.03%)</title><rect x="993.3" y="389" width="0.4" height="15.0" fill="rgb(249,206,49)" rx="2" ry="2" />
+<text  x="996.32" y="399.5" ></text>
+</g>
+<g >
+<title>_raw_spin_lock (222,222,220 samples, 0.06%)</title><rect x="221.0" y="229" width="0.8" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="224.05" y="239.5" ></text>
+</g>
+<g >
+<title>UTaskWrapper::UTaskWrapper (949,494,940 samples, 0.26%)</title><rect x="48.8" y="405" width="3.1" height="15.0" fill="rgb(237,149,35)" rx="2" ry="2" />
+<text  x="51.78" y="415.5" ></text>
+</g>
+<g >
+<title>finish_task_switch (41,272,726,860 samples, 11.36%)</title><rect x="808.2" y="277" width="134.0" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="811.16" y="287.5" >finish_task_switch</text>
+</g>
+<g >
+<title>_IO_file_write@@GLIBC_2.2.5 (131,313,130 samples, 0.04%)</title><rect x="984.3" y="501" width="0.5" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="987.33" y="511.5" ></text>
+</g>
+<g >
+<title>UThreadObject::UThreadObject (60,606,060 samples, 0.02%)</title><rect x="269.0" y="389" width="0.2" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="271.99" y="399.5" ></text>
+</g>
+<g >
+<title>std::unordered_map&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, GParam*, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt; &gt;::end (40,404,040 samples, 0.01%)</title><rect x="1031.7" y="165" width="0.2" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="1034.75" y="175.5" ></text>
+</g>
+<g >
+<title>pty_write (7,494,949,420 samples, 2.06%)</title><rect x="1002.0" y="389" width="24.3" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="1004.95" y="399.5" >p..</text>
+</g>
+<g >
+<title>finish_task_switch (1,262,626,250 samples, 0.35%)</title><rect x="1060.4" y="357" width="4.1" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="1063.42" y="367.5" ></text>
+</g>
+<g >
+<title>std::lock_guard&lt;std::mutex&gt;::~lock_guard (191,919,190 samples, 0.05%)</title><rect x="267.6" y="373" width="0.7" height="15.0" fill="rgb(221,75,18)" rx="2" ry="2" />
+<text  x="270.64" y="383.5" ></text>
+</g>
+<g >
+<title>UTaskWrapper::UTaskWrapper (2,252,525,230 samples, 0.62%)</title><rect x="95.5" y="389" width="7.3" height="15.0" fill="rgb(237,149,35)" rx="2" ry="2" />
+<text  x="98.48" y="399.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::stealTask (101,010,100 samples, 0.03%)</title><rect x="977.9" y="405" width="0.3" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="980.87" y="415.5" ></text>
+</g>
+<g >
+<title>__audit_syscall_exit (70,707,070 samples, 0.02%)</title><rect x="1189.4" y="453" width="0.2" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="1192.41" y="463.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Equal_helper&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, unsigned long, true&gt;::_S_equals (212,121,210 samples, 0.06%)</title><rect x="1032.4" y="85" width="0.7" height="15.0" fill="rgb(235,141,33)" rx="2" ry="2" />
+<text  x="1035.40" y="95.5" ></text>
+</g>
+<g >
+<title>CObject::CObject (272,727,270 samples, 0.08%)</title><rect x="96.1" y="373" width="0.9" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="99.13" y="383.5" ></text>
+</g>
+<g >
+<title>__audit_syscall_entry (646,464,640 samples, 0.18%)</title><rect x="962.2" y="309" width="2.1" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="965.15" y="319.5" ></text>
+</g>
+<g >
+<title>__wake_up_common_lock (101,010,100 samples, 0.03%)</title><rect x="995.9" y="405" width="0.4" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="998.95" y="415.5" ></text>
+</g>
+<g >
+<title>_raw_spin_lock_irqsave (50,505,050 samples, 0.01%)</title><rect x="987.4" y="485" width="0.2" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="990.45" y="495.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct_aux&lt;char const*&gt; (121,212,120 samples, 0.03%)</title><rect x="1034.1" y="165" width="0.4" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="1037.14" y="175.5" ></text>
+</g>
+<g >
+<title>std::deque&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::allocator&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt; &gt; &gt;::empty (292,929,290 samples, 0.08%)</title><rect x="160.9" y="357" width="1.0" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="163.90" y="367.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_unlock (171,717,170 samples, 0.05%)</title><rect x="1036.0" y="149" width="0.6" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1039.04" y="159.5" ></text>
+</g>
+<g >
+<title>futex_wait (1,848,484,830 samples, 0.51%)</title><rect x="1049.7" y="421" width="6.0" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="1052.66" y="431.5" ></text>
+</g>
+<g >
+<title>std::ostream::sentry::~sentry (141,414,140 samples, 0.04%)</title><rect x="983.4" y="485" width="0.5" height="15.0" fill="rgb(237,150,36)" rx="2" ry="2" />
+<text  x="986.45" y="495.5" ></text>
+</g>
+<g >
+<title>syscall_slow_exit_work (4,808,080,760 samples, 1.32%)</title><rect x="942.9" y="325" width="15.6" height="15.0" fill="rgb(248,200,47)" rx="2" ry="2" />
+<text  x="945.89" y="335.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;char&gt; (50,505,050 samples, 0.01%)</title><rect x="1038.6" y="53" width="0.2" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="1041.60" y="63.5" ></text>
+</g>
+<g >
+<title>GParamManager::get (606,060,600 samples, 0.17%)</title><rect x="1031.7" y="181" width="2.0" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="1034.71" y="191.5" ></text>
+</g>
+<g >
+<title>sched_yield@plt (90,909,090 samples, 0.03%)</title><rect x="964.8" y="373" width="0.3" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="967.78" y="383.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (40,404,040 samples, 0.01%)</title><rect x="163.0" y="325" width="0.2" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="166.04" y="335.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (6,030,302,970 samples, 1.66%)</title><rect x="1169.8" y="389" width="19.6" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="1172.82" y="399.5" ></text>
+</g>
+<g >
+<title>std::locale::id::_M_id (111,111,110 samples, 0.03%)</title><rect x="10.4" y="485" width="0.3" height="15.0" fill="rgb(222,82,19)" rx="2" ry="2" />
+<text  x="13.36" y="495.5" ></text>
+</g>
+<g >
+<title>[libstdc++.so.6.0.25] (171,717,170 samples, 0.05%)</title><rect x="1065.7" y="469" width="0.5" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="1068.67" y="479.5" ></text>
+</g>
+<g >
+<title>std::unique_ptr&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::~unique_ptr (10,434,343,330 samples, 2.87%)</title><rect x="124.8" y="373" width="33.9" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="127.81" y="383.5" >st..</text>
+</g>
+<g >
+<title>__inode_security_revalidate (70,707,070 samples, 0.02%)</title><rect x="994.5" y="389" width="0.3" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="997.54" y="399.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::find (656,565,650 samples, 0.18%)</title><rect x="1037.4" y="149" width="2.2" height="15.0" fill="rgb(244,181,43)" rx="2" ry="2" />
+<text  x="1040.42" y="159.5" ></text>
+</g>
+<g >
+<title>std::get&lt;0ul, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; (50,505,050 samples, 0.01%)</title><rect x="1038.4" y="53" width="0.1" height="15.0" fill="rgb(234,134,32)" rx="2" ry="2" />
+<text  x="1041.37" y="63.5" ></text>
+</g>
+<g >
+<title>std::queue&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::deque&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::allocator&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt; &gt; &gt; &gt;::empty (222,222,220 samples, 0.06%)</title><rect x="268.3" y="373" width="0.7" height="15.0" fill="rgb(235,141,33)" rx="2" ry="2" />
+<text  x="271.27" y="383.5" ></text>
+</g>
+<g >
+<title>down_read (80,808,080 samples, 0.02%)</title><rect x="1000.3" y="389" width="0.3" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="1003.31" y="399.5" ></text>
+</g>
+<g >
+<title>do_futex (10,646,464,540 samples, 2.93%)</title><rect x="220.2" y="261" width="34.5" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="223.16" y="271.5" >do..</text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_find_node (262,626,260 samples, 0.07%)</title><rect x="1032.2" y="133" width="0.9" height="15.0" fill="rgb(229,114,27)" rx="2" ry="2" />
+<text  x="1035.24" y="143.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Select1st::operator (80,808,080 samples, 0.02%)</title><rect x="1038.3" y="69" width="0.2" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1041.28" y="79.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_S_copy (70,707,070 samples, 0.02%)</title><rect x="1040.0" y="117" width="0.3" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="1043.05" y="127.5" ></text>
+</g>
+<g >
+<title>std::operator&lt;&lt; &lt;std::char_traits&lt;char&gt; &gt; (212,121,210 samples, 0.06%)</title><rect x="1044.5" y="213" width="0.7" height="15.0" fill="rgb(219,65,15)" rx="2" ry="2" />
+<text  x="1047.54" y="223.5" ></text>
+</g>
+<g >
+<title>syscall_trace_enter (40,404,040 samples, 0.01%)</title><rect x="1065.5" y="453" width="0.1" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="1068.51" y="463.5" ></text>
+</g>
+<g >
+<title>_IO_file_overflow@@GLIBC_2.2.5 (60,606,060 samples, 0.02%)</title><rect x="1070.2" y="517" width="0.2" height="15.0" fill="rgb(239,157,37)" rx="2" ry="2" />
+<text  x="1073.23" y="527.5" ></text>
+</g>
+<g >
+<title>std::pointer_traits&lt;char*&gt;::pointer_to (80,808,080 samples, 0.02%)</title><rect x="1034.7" y="165" width="0.3" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="1037.70" y="175.5" ></text>
+</g>
+<g >
+<title>UWorkStealingQueue::tryPop (434,343,430 samples, 0.12%)</title><rect x="365.1" y="389" width="1.4" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="368.13" y="399.5" ></text>
+</g>
+<g >
+<title>__libc_enable_asynccancel (131,313,130 samples, 0.04%)</title><rect x="1029.1" y="501" width="0.4" height="15.0" fill="rgb(219,67,16)" rx="2" ry="2" />
+<text  x="1032.09" y="511.5" ></text>
+</g>
+<g >
+<title>_raw_spin_unlock_irqrestore (70,707,070 samples, 0.02%)</title><rect x="999.5" y="357" width="0.2" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="1002.46" y="367.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;&amp;, std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;*&gt; (464,646,460 samples, 0.13%)</title><rect x="265.7" y="341" width="1.5" height="15.0" fill="rgb(244,183,43)" rx="2" ry="2" />
+<text  x="268.67" y="351.5" ></text>
+</g>
+<g >
+<title>tty_paranoia_check (181,818,180 samples, 0.05%)</title><rect x="1027.7" y="405" width="0.6" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1030.74" y="415.5" ></text>
+</g>
+<g >
+<title>std::__uniq_ptr_impl&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::__uniq_ptr_impl (181,818,180 samples, 0.05%)</title><rect x="98.1" y="373" width="0.6" height="15.0" fill="rgb(250,209,50)" rx="2" ry="2" />
+<text  x="101.13" y="383.5" ></text>
+</g>
+<g >
+<title>bpf_lsm_file_permission (70,707,070 samples, 0.02%)</title><rect x="993.1" y="405" width="0.2" height="15.0" fill="rgb(238,154,36)" rx="2" ry="2" />
+<text  x="996.06" y="415.5" ></text>
+</g>
+<g >
+<title>std::__uniq_ptr_impl&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::__uniq_ptr_impl (737,373,730 samples, 0.20%)</title><rect x="99.9" y="357" width="2.4" height="15.0" fill="rgb(250,209,50)" rx="2" ry="2" />
+<text  x="102.87" y="367.5" ></text>
+</g>
+<g >
+<title>_IO_fflush (141,414,140 samples, 0.04%)</title><rect x="1042.9" y="213" width="0.5" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="1045.93" y="223.5" ></text>
+</g>
+<g >
+<title>UThreadObject::~UThreadObject (1,353,535,340 samples, 0.37%)</title><rect x="106.5" y="373" width="4.4" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="109.53" y="383.5" ></text>
+</g>
+<g >
+<title>tty_flip_buffer_push (90,909,090 samples, 0.03%)</title><rect x="1026.0" y="373" width="0.3" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="1029.00" y="383.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_rdlock (2,919,191,890 samples, 0.80%)</title><rect x="1046.4" y="501" width="9.5" height="15.0" fill="rgb(224,88,21)" rx="2" ry="2" />
+<text  x="1049.41" y="511.5" ></text>
+</g>
+<g >
+<title>std::thread::_State_impl&lt;std::thread::_Invoker&lt;std::tuple&lt;int  (298,292,926,310 samples, 82.12%)</title><rect x="10.7" y="501" width="969.0" height="15.0" fill="rgb(250,208,49)" rx="2" ry="2" />
+<text  x="13.72" y="511.5" >std::thread::_State_impl&lt;std::thread::_Invoker&lt;std::tuple&lt;int </text>
+</g>
+<g >
+<title>std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;::operator (111,111,110 samples, 0.03%)</title><rect x="1033.2" y="117" width="0.4" height="15.0" fill="rgb(225,93,22)" rx="2" ry="2" />
+<text  x="1036.22" y="127.5" ></text>
+</g>
+<g >
+<title>std::__future_base::_Task_state&lt;std::_Bind&lt;int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="341" width="16.9" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1032.51" y="351.5" ></text>
+</g>
+<g >
+<title>std::deque&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt;, std::allocator&lt;std::unique_ptr&lt;UTaskWrapper, std::default_delete&lt;UTaskWrapper&gt; &gt; &gt; &gt;::empty (474,747,470 samples, 0.13%)</title><rect x="264.1" y="341" width="1.6" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="267.13" y="351.5" ></text>
+</g>
+<g >
+<title>__check_heap_object (60,606,060 samples, 0.02%)</title><rect x="995.6" y="389" width="0.2" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="998.59" y="399.5" ></text>
+</g>
+<g >
+<title>do_syscall_64 (2,353,535,330 samples, 0.65%)</title><rect x="1058.0" y="469" width="7.6" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="1061.00" y="479.5" ></text>
+</g>
+<g >
+<title>std::lock_guard&lt;std::mutex&gt;::lock_guard (141,414,140 samples, 0.04%)</title><rect x="267.2" y="373" width="0.4" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="270.18" y="383.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;char&gt; (101,010,100 samples, 0.03%)</title><rect x="1032.7" y="53" width="0.3" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="1035.70" y="63.5" ></text>
+</g>
+<g >
+<title>queue_work_on (7,060,605,990 samples, 1.94%)</title><rect x="1003.1" y="373" width="22.9" height="15.0" fill="rgb(248,200,48)" rx="2" ry="2" />
+<text  x="1006.07" y="383.5" >q..</text>
+</g>
+<g >
+<title>n_tty_write (9,343,434,250 samples, 2.57%)</title><rect x="997.3" y="405" width="30.3" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="1000.26" y="415.5" >n_..</text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (161,616,160 samples, 0.04%)</title><rect x="337.2" y="357" width="0.6" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="340.24" y="367.5" ></text>
+</g>
+<g >
+<title>std::this_thread::yield (373,737,370 samples, 0.10%)</title><rect x="978.2" y="405" width="1.2" height="15.0" fill="rgb(231,123,29)" rx="2" ry="2" />
+<text  x="981.20" y="415.5" ></text>
+</g>
+<g >
+<title>UAtomicQueue&lt;UTaskWrapper&gt;::tryPop (90,909,090 samples, 0.03%)</title><rect x="95.2" y="389" width="0.3" height="15.0" fill="rgb(240,165,39)" rx="2" ry="2" />
+<text  x="98.18" y="399.5" ></text>
+</g>
+<g >
+<title>std::get&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt; (3,616,161,580 samples, 1.00%)</title><rect x="147.0" y="357" width="11.7" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="149.96" y="367.5" ></text>
+</g>
+<g >
+<title>unroll_tree_refs (353,535,350 samples, 0.10%)</title><rect x="957.4" y="293" width="1.1" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="960.36" y="303.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::popTask (60,606,060 samples, 0.02%)</title><rect x="70.2" y="405" width="0.2" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="73.24" y="415.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_unlock (8,707,070,620 samples, 2.40%)</title><rect x="1161.5" y="517" width="28.2" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1164.45" y="527.5" >_..</text>
+</g>
+<g >
+<title>std::char_traits&lt;char&gt;::length (50,505,050 samples, 0.01%)</title><rect x="1040.8" y="181" width="0.2" height="15.0" fill="rgb(245,188,44)" rx="2" ry="2" />
+<text  x="1043.80" y="191.5" ></text>
+</g>
+<g >
+<title>_IO_putc (606,060,600 samples, 0.17%)</title><rect x="980.4" y="485" width="1.9" height="15.0" fill="rgb(236,142,34)" rx="2" ry="2" />
+<text  x="983.36" y="495.5" ></text>
+</g>
+<g >
+<title>schedule (1,353,535,340 samples, 0.37%)</title><rect x="1050.4" y="389" width="4.3" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="1053.35" y="399.5" ></text>
+</g>
+<g >
+<title>std::shared_mutex::unlock (161,616,160 samples, 0.04%)</title><rect x="1042.3" y="165" width="0.5" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1045.31" y="175.5" ></text>
+</g>
+<g >
+<title>get_futex_value_locked (121,212,120 samples, 0.03%)</title><rect x="1055.2" y="389" width="0.4" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="1058.17" y="399.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (1,212,121,200 samples, 0.33%)</title><rect x="278.7" y="341" width="4.0" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="281.73" y="351.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (131,313,130 samples, 0.04%)</title><rect x="215.1" y="325" width="0.5" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="218.14" y="335.5" ></text>
+</g>
+<g >
+<title>std::unordered_map&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, GParam*, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt; &gt;::find (676,767,670 samples, 0.19%)</title><rect x="1037.4" y="165" width="2.2" height="15.0" fill="rgb(225,96,23)" rx="2" ry="2" />
+<text  x="1040.36" y="175.5" ></text>
+</g>
+<g >
+<title>std::ostream::flush (70,707,070 samples, 0.02%)</title><rect x="1045.5" y="213" width="0.2" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="1048.46" y="223.5" ></text>
+</g>
+<g >
+<title>std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;::operator (101,010,100 samples, 0.03%)</title><rect x="1032.7" y="69" width="0.3" height="15.0" fill="rgb(245,188,45)" rx="2" ry="2" />
+<text  x="1035.70" y="79.5" ></text>
+</g>
+<g >
+<title>__lll_unlock_wake (11,949,494,830 samples, 3.29%)</title><rect x="216.4" y="325" width="38.8" height="15.0" fill="rgb(214,45,10)" rx="2" ry="2" />
+<text  x="219.39" y="335.5" >__l..</text>
+</g>
+<g >
+<title>__pthread_mutex_trylock (4,575,757,530 samples, 1.26%)</title><rect x="298.7" y="341" width="14.9" height="15.0" fill="rgb(252,220,52)" rx="2" ry="2" />
+<text  x="301.75" y="351.5" ></text>
+</g>
+<g >
+<title>UThreadBase::popPoolTask (33,949,494,610 samples, 9.35%)</title><rect x="158.7" y="389" width="110.3" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="161.71" y="399.5" >UThreadBase::..</text>
+</g>
+<g >
+<title>GCluster::process (5,161,616,110 samples, 1.42%)</title><rect x="1029.5" y="229" width="16.8" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1032.51" y="239.5" ></text>
+</g>
+<g >
+<title>mntput (111,111,110 samples, 0.03%)</title><rect x="956.4" y="293" width="0.3" height="15.0" fill="rgb(220,72,17)" rx="2" ry="2" />
+<text  x="959.38" y="303.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (191,919,190 samples, 0.05%)</title><rect x="314.6" y="341" width="0.6" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="317.56" y="351.5" ></text>
+</g>
+<g >
+<title>do_syscall_64 (2,373,737,350 samples, 0.65%)</title><rect x="1048.2" y="469" width="7.7" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="1051.18" y="479.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_lock (14,232,323,090 samples, 3.92%)</title><rect x="167.2" y="325" width="46.2" height="15.0" fill="rgb(220,70,16)" rx="2" ry="2" />
+<text  x="170.20" y="335.5" >__pt..</text>
+</g>
+<g >
+<title>std::_Tuple_impl&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_M_head (3,343,434,310 samples, 0.92%)</title><rect x="131.3" y="325" width="10.9" height="15.0" fill="rgb(234,136,32)" rx="2" ry="2" />
+<text  x="134.34" y="335.5" ></text>
+</g>
+<g >
+<title>mark_wake_futex (90,909,090 samples, 0.03%)</title><rect x="1169.2" y="421" width="0.3" height="15.0" fill="rgb(247,193,46)" rx="2" ry="2" />
+<text  x="1172.20" y="431.5" ></text>
+</g>
+<g >
+<title>std::mutex::unlock (151,515,150 samples, 0.04%)</title><rect x="263.5" y="357" width="0.5" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="266.51" y="367.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;UTaskWrapper, UTaskWrapper&amp;, UTaskWrapper*&gt; (131,313,130 samples, 0.04%)</title><rect x="325.9" y="357" width="0.4" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="328.92" y="367.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_unlock (80,808,080 samples, 0.02%)</title><rect x="1042.3" y="149" width="0.3" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1045.31" y="159.5" ></text>
+</g>
+<g >
+<title>std::_Head_base&lt;0ul, UTaskWrapper::implBase*, false&gt;::_M_head (444,444,440 samples, 0.12%)</title><rect x="145.5" y="293" width="1.5" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="148.52" y="303.5" ></text>
+</g>
+<g >
+<title>std::__invoke_impl&lt;int, int  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="245" width="16.9" height="15.0" fill="rgb(207,12,3)" rx="2" ry="2" />
+<text  x="1032.51" y="255.5" ></text>
+</g>
+<g >
+<title>std::mutex::try_lock (1,464,646,450 samples, 0.40%)</title><rect x="339.3" y="357" width="4.8" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="342.31" y="367.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;UThreadPrimary*, std::allocator&lt;UThreadPrimary*&gt; &gt;::size (141,414,140 samples, 0.04%)</title><rect x="977.4" y="389" width="0.4" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="980.38" y="399.5" ></text>
+</g>
+<g >
+<title>std::mutex::unlock (14,848,484,700 samples, 4.09%)</title><rect x="214.7" y="341" width="48.3" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="217.72" y="351.5" >std:..</text>
+</g>
+<g >
+<title>schedule (1,313,131,300 samples, 0.36%)</title><rect x="1060.3" y="389" width="4.2" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="1063.26" y="399.5" ></text>
+</g>
+<g >
+<title>[libstdc++.so.6.0.25] (60,606,060 samples, 0.02%)</title><rect x="979.8" y="485" width="0.2" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="982.80" y="495.5" ></text>
+</g>
+<g >
+<title>__mempcpy_avx_unaligned (111,111,110 samples, 0.03%)</title><rect x="1073.0" y="517" width="0.3" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="1075.96" y="527.5" ></text>
+</g>
+<g >
+<title>native_queued_spin_lock_slowpath (40,404,040 samples, 0.01%)</title><rect x="166.6" y="197" width="0.1" height="15.0" fill="rgb(238,153,36)" rx="2" ry="2" />
+<text  x="169.61" y="207.5" ></text>
+</g>
+<g >
+<title>std::shared_mutex::unlock_shared (222,222,220 samples, 0.06%)</title><rect x="1036.0" y="181" width="0.7" height="15.0" fill="rgb(248,198,47)" rx="2" ry="2" />
+<text  x="1039.01" y="191.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::allocator&lt;std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt; &gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_find_before_node (303,030,300 samples, 0.08%)</title><rect x="1037.9" y="117" width="1.0" height="15.0" fill="rgb(215,49,11)" rx="2" ry="2" />
+<text  x="1040.88" y="127.5" ></text>
+</g>
+<g >
+<title>file_has_perm (141,414,140 samples, 0.04%)</title><rect x="993.3" y="405" width="0.4" height="15.0" fill="rgb(241,165,39)" rx="2" ry="2" />
+<text  x="996.29" y="415.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_trylock (121,212,120 samples, 0.03%)</title><rect x="336.8" y="357" width="0.4" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="339.84" y="367.5" ></text>
+</g>
+<g >
+<title>__cxxabiv1::__si_class_type_info::__do_dyncast (171,717,170 samples, 0.05%)</title><rect x="1071.9" y="517" width="0.6" height="15.0" fill="rgb(219,65,15)" rx="2" ry="2" />
+<text  x="1074.91" y="527.5" ></text>
+</g>
+<g >
+<title>std::tuple&lt;UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::tuple&lt;UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt;, true&gt; (151,515,150 samples, 0.04%)</title><rect x="102.3" y="357" width="0.5" height="15.0" fill="rgb(215,47,11)" rx="2" ry="2" />
+<text  x="105.27" y="367.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (80,808,080 samples, 0.02%)</title><rect x="314.3" y="341" width="0.3" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="317.30" y="351.5" ></text>
+</g>
+<g >
+<title>std::ostream::operator&lt;&lt; (111,111,110 samples, 0.03%)</title><rect x="1045.7" y="213" width="0.4" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="1048.69" y="223.5" ></text>
+</g>
+<g >
+<title>std::shared_lock&lt;std::shared_mutex&gt;::shared_lock (242,424,240 samples, 0.07%)</title><rect x="1035.2" y="197" width="0.8" height="15.0" fill="rgb(253,223,53)" rx="2" ry="2" />
+<text  x="1038.22" y="207.5" ></text>
+</g>
+<g >
+<title>std::addressof&lt;char&gt; (50,505,050 samples, 0.01%)</title><rect x="1034.5" y="165" width="0.2" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="1037.53" y="175.5" ></text>
+</g>
+<g >
+<title>std::_Hash_bytes (70,707,070 samples, 0.02%)</title><rect x="1039.1" y="101" width="0.3" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="1042.13" y="111.5" ></text>
+</g>
+<g >
+<title>std::_Tuple_impl&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_Tuple_impl (212,121,210 samples, 0.06%)</title><rect x="101.0" y="325" width="0.6" height="15.0" fill="rgb(253,222,53)" rx="2" ry="2" />
+<text  x="103.96" y="335.5" ></text>
+</g>
+<g >
+<title>UThreadObject::~UThreadObject (101,010,100 samples, 0.03%)</title><rect x="269.2" y="389" width="0.3" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="272.19" y="399.5" ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_after_hwframe (7,808,080,730 samples, 2.15%)</title><rect x="1164.4" y="501" width="25.3" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="1167.37" y="511.5" >e..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_S_copy_chars (80,808,080 samples, 0.02%)</title><rect x="1040.0" y="133" width="0.3" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="1043.05" y="143.5" ></text>
+</g>
+<g >
+<title>UThreadPrimary::popTask (17,898,989,720 samples, 4.93%)</title><rect x="269.5" y="389" width="58.2" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="272.51" y="399.5" >UThrea..</text>
+</g>
+<g >
+<title>try_to_wake_up (6,050,504,990 samples, 1.67%)</title><rect x="1169.8" y="405" width="19.6" height="15.0" fill="rgb(220,70,16)" rx="2" ry="2" />
+<text  x="1172.75" y="415.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;UThreadPrimary*, std::allocator&lt;UThreadPrimary*&gt; &gt;::operator[] (414,141,410 samples, 0.11%)</title><rect x="976.0" y="389" width="1.4" height="15.0" fill="rgb(249,204,48)" rx="2" ry="2" />
+<text  x="979.03" y="399.5" ></text>
+</g>
+<g >
+<title>__pthread_rwlock_wrlock (60,606,060 samples, 0.02%)</title><rect x="1041.7" y="149" width="0.2" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="1044.66" y="159.5" ></text>
+</g>
+<g >
+<title>__sched_text_start (1,262,626,250 samples, 0.35%)</title><rect x="1060.4" y="373" width="4.1" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="1063.42" y="383.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_unlock (525,252,520 samples, 0.14%)</title><rect x="315.2" y="341" width="1.7" height="15.0" fill="rgb(253,224,53)" rx="2" ry="2" />
+<text  x="318.19" y="351.5" ></text>
+</g>
+<g >
+<title>__gthread_active_p (4,575,757,530 samples, 1.26%)</title><rect x="283.9" y="325" width="14.8" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="286.89" y="335.5" ></text>
+</g>
+<g >
+<title>syscall_trace_enter (40,404,040 samples, 0.01%)</title><rect x="1055.8" y="453" width="0.1" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="1058.76" y="463.5" ></text>
+</g>
+<g >
+<title>UWorkStealingQueue::trySteal (8,161,616,080 samples, 2.25%)</title><rect x="334.5" y="373" width="26.6" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="337.55" y="383.5" >U..</text>
+</g>
+<g >
+<title>std::__detail::_Hashtable_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::pair&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const, GParam*&gt;, std::__detail::_Select1st, std::equal_to&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::hash&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Hashtable_traits&lt;true, false, true&gt; &gt;::_M_equals (212,121,210 samples, 0.06%)</title><rect x="1032.4" y="101" width="0.7" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="1035.40" y="111.5" ></text>
+</g>
+<g >
+<title>[libstdc++.so.6.0.25] (707,070,700 samples, 0.19%)</title><rect x="1065.7" y="485" width="2.3" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="1068.67" y="495.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_unlock (252,525,250 samples, 0.07%)</title><rect x="215.6" y="325" width="0.8" height="15.0" fill="rgb(212,32,7)" rx="2" ry="2" />
+<text  x="218.57" y="335.5" ></text>
+</g>
+<g >
+<title>__pthread_mutex_unlock_usercnt (2,707,070,680 samples, 0.75%)</title><rect x="316.9" y="341" width="8.8" height="15.0" fill="rgb(253,221,52)" rx="2" ry="2" />
+<text  x="319.89" y="351.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_trylock (181,818,180 samples, 0.05%)</title><rect x="273.2" y="357" width="0.6" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="276.19" y="367.5" ></text>
+</g>
+<g >
+<title>_copy_from_user (272,727,270 samples, 0.08%)</title><rect x="996.3" y="405" width="0.9" height="15.0" fill="rgb(206,7,1)" rx="2" ry="2" />
+<text  x="999.31" y="415.5" ></text>
+</g>
+<g >
+<title>hash_futex (80,808,080 samples, 0.02%)</title><rect x="1168.9" y="421" width="0.3" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="1171.93" y="431.5" ></text>
+</g>
+<g >
+<title>vfs_write (11,303,030,190 samples, 3.11%)</title><rect x="991.8" y="437" width="36.8" height="15.0" fill="rgb(250,209,50)" rx="2" ry="2" />
+<text  x="994.85" y="447.5" >vfs..</text>
+</g>
+<g >
+<title>__x64_sys_futex (434,343,430 samples, 0.12%)</title><rect x="165.7" y="277" width="1.4" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="168.69" y="287.5" ></text>
+</g>
+<g >
+<title>__audit_syscall_exit (4,222,222,180 samples, 1.16%)</title><rect x="944.8" y="309" width="13.7" height="15.0" fill="rgb(218,62,14)" rx="2" ry="2" />
+<text  x="947.79" y="319.5" ></text>
+</g>
+<g >
+<title>std::lock_guard&lt;std::mutex&gt;::lock_guard (15,989,898,830 samples, 4.40%)</title><rect x="161.9" y="357" width="51.9" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="164.86" y="367.5" >std::..</text>
+</g>
+<g >
+<title>MyWriteParamNode::run (1,858,585,840 samples, 0.51%)</title><rect x="1036.8" y="213" width="6.0" height="15.0" fill="rgb(223,86,20)" rx="2" ry="2" />
+<text  x="1039.80" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char const*&gt; (121,212,120 samples, 0.03%)</title><rect x="1034.1" y="149" width="0.4" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1037.14" y="159.5" ></text>
+</g>
+<g >
+<title>std::mutex::try_lock (181,818,180 samples, 0.05%)</title><rect x="326.7" y="373" width="0.6" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="329.74" y="383.5" ></text>
+</g>
+<g >
+<title>__libc_disable_asynccancel (60,606,060 samples, 0.02%)</title><rect x="1028.9" y="501" width="0.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="1031.89" y="511.5" ></text>
+</g>
+<g >
+<title>futex_wake (6,686,868,620 samples, 1.84%)</title><rect x="1167.7" y="437" width="21.7" height="15.0" fill="rgb(219,65,15)" rx="2" ry="2" />
+<text  x="1170.69" y="447.5" >f..</text>
+</g>
+<g >
+<title>__gthread_mutex_lock (70,707,070 samples, 0.02%)</title><rect x="163.2" y="325" width="0.2" height="15.0" fill="rgb(228,107,25)" rx="2" ry="2" />
+<text  x="166.17" y="335.5" ></text>
+</g>
+<g >
+<title>__gthread_mutex_trylock (333,333,330 samples, 0.09%)</title><rect x="340.8" y="341" width="1.1" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="343.78" y="351.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;UThreadPrimary*, std::allocator&lt;UThreadPrimary*&gt; &gt;::size (424,242,420 samples, 0.12%)</title><rect x="363.8" y="373" width="1.3" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="366.75" y="383.5" ></text>
+</g>
+<g >
+<title>do_output_char (363,636,360 samples, 0.10%)</title><rect x="999.1" y="389" width="1.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="1002.13" y="399.5" ></text>
+</g>
+<g >
+<title>__sched_yield (167,575,755,900 samples, 46.13%)</title><rect x="420.4" y="373" width="544.4" height="15.0" fill="rgb(213,40,9)" rx="2" ry="2" />
+<text  x="423.42" y="383.5" >__sched_yield</text>
+</g>
+<g >
+<title>std::__invoke_impl&lt;int, int  (298,292,926,310 samples, 82.12%)</title><rect x="10.7" y="437" width="969.0" height="15.0" fill="rgb(207,12,3)" rx="2" ry="2" />
+<text  x="13.72" y="447.5" >std::__invoke_impl&lt;int, int </text>
+</g>
+<g >
+<title>std::mutex::unlock (171,717,170 samples, 0.05%)</title><rect x="362.1" y="373" width="0.6" height="15.0" fill="rgb(227,105,25)" rx="2" ry="2" />
+<text  x="365.14" y="383.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_S_copy (50,505,050 samples, 0.01%)</title><rect x="1034.3" y="117" width="0.2" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="1037.34" y="127.5" ></text>
+</g>
+<g >
+<title>up_read (40,404,040 samples, 0.01%)</title><rect x="1027.4" y="389" width="0.2" height="15.0" fill="rgb(209,18,4)" rx="2" ry="2" />
+<text  x="1030.45" y="399.5" ></text>
+</g>
+<g >
+<title>new_do_write (80,808,080 samples, 0.02%)</title><rect x="1189.7" y="517" width="0.3" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="1192.74" y="527.5" ></text>
+</g>
+<g >
+<title>security_file_permission (555,555,550 samples, 0.15%)</title><rect x="993.0" y="421" width="1.8" height="15.0" fill="rgb(225,96,23)" rx="2" ry="2" />
+<text  x="995.99" y="431.5" ></text>
+</g>
+<g >
+<title>std::call_once&lt;void  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="469" width="16.9" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1032.51" y="479.5" ></text>
+</g>
+<g >
+<title>_IO_fflush (70,707,070 samples, 0.02%)</title><rect x="983.9" y="501" width="0.2" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="986.91" y="511.5" ></text>
+</g>
+<g >
+<title>std::mutex::try_lock (11,585,858,470 samples, 3.19%)</title><rect x="276.4" y="357" width="37.6" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="279.37" y="367.5" >std..</text>
+</g>
+<g >
+<title>get_futex_key (60,606,060 samples, 0.02%)</title><rect x="1168.7" y="421" width="0.2" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="1171.74" y="431.5" ></text>
+</g>
+<g >
+<title>kfree (282,828,280 samples, 0.08%)</title><rect x="955.5" y="293" width="0.9" height="15.0" fill="rgb(222,78,18)" rx="2" ry="2" />
+<text  x="958.46" y="303.5" ></text>
+</g>
+<g >
+<title>UTaskWrapper::~UTaskWrapper (17,212,121,040 samples, 4.74%)</title><rect x="102.8" y="389" width="55.9" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="105.79" y="399.5" >UTask..</text>
+</g>
+<g >
+<title>__gthread_active_p (191,919,190 samples, 0.05%)</title><rect x="344.7" y="341" width="0.6" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="347.69" y="351.5" ></text>
+</g>
+<g >
+<title>tty_write (10,393,939,290 samples, 2.86%)</title><rect x="994.8" y="421" width="33.8" height="15.0" fill="rgb(234,134,32)" rx="2" ry="2" />
+<text  x="997.80" y="431.5" >tt..</text>
+</g>
+<g >
+<title>std::unique_ptr&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::~unique_ptr (3,212,121,180 samples, 0.88%)</title><rect x="965.6" y="389" width="10.4" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="968.60" y="399.5" ></text>
+</g>
+<g >
+<title>__fget_files (191,919,190 samples, 0.05%)</title><rect x="991.1" y="405" width="0.6" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="994.12" y="415.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::basic_string&lt;std::allocator&lt;char&gt; &gt; (323,232,320 samples, 0.09%)</title><rect x="1034.1" y="197" width="1.0" height="15.0" fill="rgb(209,22,5)" rx="2" ry="2" />
+<text  x="1037.08" y="207.5" ></text>
+</g>
+<g >
+<title>futex_wait_queue_me (1,464,646,450 samples, 0.40%)</title><rect x="1050.0" y="405" width="4.7" height="15.0" fill="rgb(254,228,54)" rx="2" ry="2" />
+<text  x="1052.99" y="415.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_S_copy_chars (70,707,070 samples, 0.02%)</title><rect x="1034.3" y="133" width="0.2" height="15.0" fill="rgb(223,85,20)" rx="2" ry="2" />
+<text  x="1037.27" y="143.5" ></text>
+</g>
+<g >
+<title>std::deque&lt;UTaskWrapper, std::allocator&lt;UTaskWrapper&gt; &gt;::empty (686,868,680 samples, 0.19%)</title><rect x="274.1" y="357" width="2.3" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="277.14" y="367.5" ></text>
+</g>
+<g >
+<title>process_echoes (272,727,270 samples, 0.08%)</title><rect x="1001.1" y="389" width="0.9" height="15.0" fill="rgb(218,64,15)" rx="2" ry="2" />
+<text  x="1004.07" y="399.5" ></text>
+</g>
+<g >
+<title>__raw_spin_unlock_irq (11,141,414,030 samples, 3.07%)</title><rect x="772.0" y="277" width="36.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="774.97" y="287.5" >__r..</text>
+</g>
+<g >
+<title>std::__invoke&lt;int  (298,292,926,310 samples, 82.12%)</title><rect x="10.7" y="453" width="969.0" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="13.72" y="463.5" >std::__invoke&lt;int </text>
+</g>
+<g >
+<title>std::ostream::sentry::sentry (40,404,040 samples, 0.01%)</title><rect x="1067.8" y="469" width="0.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="1070.84" y="479.5" ></text>
+</g>
+<g >
+<title>std::__shared_mutex_pthread::lock (80,808,080 samples, 0.02%)</title><rect x="1041.9" y="149" width="0.2" height="15.0" fill="rgb(207,9,2)" rx="2" ry="2" />
+<text  x="1044.85" y="159.5" ></text>
+</g>
+<g >
+<title>std::__get_helper&lt;0ul, UTaskWrapper::implBase*, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt; (1,060,606,050 samples, 0.29%)</title><rect x="127.9" y="341" width="3.4" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="130.90" y="351.5" ></text>
+</g>
+<g >
+<title>std::__uniq_ptr_impl&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_M_ptr (6,020,201,960 samples, 1.66%)</title><rect x="127.4" y="357" width="19.6" height="15.0" fill="rgb(208,17,4)" rx="2" ry="2" />
+<text  x="130.40" y="367.5" ></text>
+</g>
+<g >
+<title>queue_work_on (171,717,170 samples, 0.05%)</title><rect x="999.7" y="357" width="0.5" height="15.0" fill="rgb(248,200,48)" rx="2" ry="2" />
+<text  x="1002.69" y="367.5" ></text>
+</g>
+<g >
+<title>[libstdc++.so.6.0.25] (298,414,138,430 samples, 82.15%)</title><rect x="10.3" y="517" width="969.4" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="13.33" y="527.5" >[libstdc++.so.6.0.25]</text>
+</g>
+<g >
+<title>std::call_once&lt;void  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="453" width="16.9" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="1032.51" y="463.5" ></text>
+</g>
+<g >
+<title>std::_Function_handler&lt;std::unique_ptr&lt;std::__future_base::_Result_base, std::__future_base::_Result_base::_Deleter&gt;  (5,202,020,150 samples, 1.43%)</title><rect x="1029.5" y="373" width="16.9" height="15.0" fill="rgb(229,113,27)" rx="2" ry="2" />
+<text  x="1032.51" y="383.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait (1,171,717,160 samples, 0.32%)</title><rect x="163.4" y="325" width="3.8" height="15.0" fill="rgb(247,194,46)" rx="2" ry="2" />
+<text  x="166.40" y="335.5" ></text>
+</g>
+<g >
+<title>pthread_mutex_trylock@plt (202,020,200 samples, 0.06%)</title><rect x="343.4" y="341" width="0.7" height="15.0" fill="rgb(246,189,45)" rx="2" ry="2" />
+<text  x="346.41" y="351.5" ></text>
+</g>
+<g >
+<title>futex_wait (383,838,380 samples, 0.11%)</title><rect x="165.9" y="245" width="1.2" height="15.0" fill="rgb(235,138,33)" rx="2" ry="2" />
+<text  x="168.86" y="255.5" ></text>
+</g>
+<g >
+<title>__gthread_yield (7,838,383,760 samples, 2.16%)</title><rect x="395.0" y="373" width="25.4" height="15.0" fill="rgb(218,61,14)" rx="2" ry="2" />
+<text  x="397.96" y="383.5" >_..</text>
+</g>
+<g >
+<title>std::unique_lock&lt;std::shared_mutex&gt;::lock (272,727,270 samples, 0.08%)</title><rect x="1041.2" y="181" width="0.9" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="1044.23" y="191.5" ></text>
+</g>
+<g >
+<title>std::__uniq_ptr_impl&lt;UTaskWrapper::implBase, std::default_delete&lt;UTaskWrapper::implBase&gt; &gt;::_M_ptr (4,272,727,230 samples, 1.18%)</title><rect x="110.9" y="373" width="13.9" height="15.0" fill="rgb(208,17,4)" rx="2" ry="2" />
+<text  x="113.93" y="383.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::stdio_sync_filebuf&lt;char, std::char_traits&lt;char&gt; &gt;::xsputn (111,111,110 samples, 0.03%)</title><rect x="1068.2" y="469" width="0.3" height="15.0" fill="rgb(242,174,41)" rx="2" ry="2" />
+<text  x="1071.17" y="479.5" ></text>
+</g>
+<g >
+<title>get_futex_value_locked (131,313,130 samples, 0.04%)</title><rect x="1064.8" y="389" width="0.4" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="1067.79" y="399.5" ></text>
+</g>
+<g >
+<title>path_put (181,818,180 samples, 0.05%)</title><rect x="956.7" y="293" width="0.6" height="15.0" fill="rgb(249,206,49)" rx="2" ry="2" />
+<text  x="959.74" y="303.5" ></text>
+</g>
+<g >
+<title>std::allocator&lt;char&gt;::allocator (191,919,190 samples, 0.05%)</title><rect x="1043.6" y="213" width="0.6" height="15.0" fill="rgb(248,198,47)" rx="2" ry="2" />
+<text  x="1046.59" y="223.5" ></text>
+</g>
+<g >
+<title>T05-Param (363,252,521,620 samples, 100.00%)</title><rect x="10.0" y="533" width="1180.0" height="15.0" fill="rgb(217,56,13)" rx="2" ry="2" />
+<text  x="13.00" y="543.5" >T05-Param</text>
+</g>
+<g >
+<title>pthread_mutex_unlock@plt (181,818,180 samples, 0.05%)</title><rect x="359.8" y="341" width="0.6" height="15.0" fill="rgb(247,194,46)" rx="2" ry="2" />
+<text  x="362.78" y="351.5" ></text>
+</g>
+<g >
+<title>__memmove_avx_unaligned (40,404,040 samples, 0.01%)</title><rect x="1040.1" y="101" width="0.1" height="15.0" fill="rgb(254,228,54)" rx="2" ry="2" />
+<text  x="1043.08" y="111.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char const*&gt; (141,414,140 samples, 0.04%)</title><rect x="1039.9" y="149" width="0.5" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="1042.95" y="159.5" ></text>
+</g>
+<g >
+<title>do_futex (1,888,888,870 samples, 0.52%)</title><rect x="1049.5" y="437" width="6.2" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="1052.53" y="447.5" ></text>
+</g>
+</g>
+</svg>

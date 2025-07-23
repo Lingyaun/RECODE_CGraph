@@ -4,7 +4,7 @@
 #include <thread>
 
 #include "../UThreadObject.h"
-#include "../AtomicQueue\UAtomicQueue.h"
+#include "../AtomicQueue/UAtomicQueue.h"
 #include "../WorkStealingQueue/UWorkStealingQueue.h"
 
 class UThreadBase : public UThreadObject { 

@@ -22,6 +22,13 @@ set(TUTORIAL_LIST
 # 编译libCGraph动态库
 add_library(CGraph SHARED ${SRC_LIST})
 
+# 查找并链接线程库
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 foreach(tes ${TUTORIAL_LIST})
     add_executable(${tes} test/${tes}.cpp ${SRC_LIST})
+    target_link_libraries(${tes} Threads::Threads)
 endforeach()
+
+target_link_libraries(CGraph Threads::Threads)
